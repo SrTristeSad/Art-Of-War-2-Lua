@@ -8,7 +8,7 @@ local SafeTable=require('src.safe_table')
 local function check(ok,msg) assert(ok,msg) end
 local function near(a,b) return math.abs(a-b)<0.00001 end
 
--- Walkable A* path may route around obstacles, but never enters a blocked cell.
+-- Walkable grid path may route around obstacles, but never enters a blocked cell.
 local grid={w=10,h=8,blocked={}}
 for y=1,7 do grid.blocked[y*grid.w+5]=true end
 local route=Path.search(grid,2,4,9,4)
@@ -52,6 +52,18 @@ check(not one:canBuild(soldier.x,soldier.y,'barracks'),'building overlaps soldie
 local preMoney=one.money[1]
 check(not one:placeBuilding('barracks',soldier.x,soldier.y),'overlap was accepted')
 check(one.money[1]==preMoney,'invalid build charged credits')
+local location
+for gy=3,one.h-3 do
+  for gx=3,one.w-3 do
+    if one:canBuild(gx*16,gy*16,'barracks') then
+      location={x=gx*16,y=gy*16};break
+    end
+  end
+  if location then break end
+end
+check(location,'no buildable tile remains on map')
+check(one:placeBuilding('barracks',location.x,location.y),'valid construction failed')
+check(one.money[1]==preMoney-one:cost('barracks'),'valid build deducted wrong amount')
 
 -- Unreachable orders may not walk through solid barriers.
 local mover=infantry[1]
@@ -81,6 +93,17 @@ for i,e in ipairs(two.entities) do
   check(f and f.kind==e.kind and near(e.x,f.x) and near(e.y,f.y),
     'world positions differ at '..i)
 end
+
+-- Production spends credits and deploys a new unit after its timer.
+local barracks
+for _,e in ipairs(two.entities) do
+  if e.team==1 and e.kind=='barracks' then barracks=e;break end
+end
+local before=#two.entities
+check(two:train(barracks,'infantry'),'could not queue an infantry unit')
+for _=1,150 do two:update(1/30) end
+check(barracks.queue==0,'production queue did not finish')
+check(#two.entities>before,'new infantry never spawned')
 
 -- Save must preserve RNG, simulation remainder and live unit state.
 local saved

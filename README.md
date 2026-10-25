@@ -14,7 +14,7 @@ A referência técnica disponível é o descritor **J2ME v1.12.0** (`docs/manife
 
 ## Estado real da v0.2
 
-**Existe:** motor em tick fixo de 30 Hz, navegação em grade sem atravessar paredes, formação de esquadrão, construção com checagem de colisões, saves legados compatíveis com parser restrito, testes de regressão; menu básico, cenário provisório, bases de dois lados, soldados e tanques, treino/construção, economia automática, navegação A*, inimigo simples, minimapa, mouse/teclado/toque, save/load e sprites extraídos fornecidos pelo usuário.
+**Existe:** motor em tick fixo de 30 Hz, navegação em grade sem atravessar paredes, formação de esquadrão, construção com checagem de colisões, saves legados compatíveis com parser restrito, testes de regressão; menu básico, cenário provisório, bases de dois lados, soldados e tanques, treino/construção, economia automática, busca de caminho em grade (BFS provisório), inimigo simples, minimapa, mouse/teclado/toque, save/load e sprites extraídos fornecidos pelo usuário.
 
 **Ainda não é fiel ao original:** campanhas/missões, mapas e scripts autênticos, comportamento de IA, parâmetros exatos, evolução tecnológica, todos os tipos de unidades/edifícios, HUD e menus originais, animações e efeitos completos, áudio e sincronização de simulação. Não apresentar essas partes do protótipo como engenharia reversa concluída.
 
@@ -47,7 +47,7 @@ O protótipo recebe eventos de toque; ainda não foi empacotado nem validado com
 
 - `main.lua`, `conf.lua`: inicialização, loops e eventos do LÖVE;
 - `src/world.lua`: simulação provisória (a ser alinhada ao motor original);
-- `src/path.lua`: A* provisório;
+- `src/path.lua`: BFS provisório;
 - `src/art.lua`: carregamento de sprites;
 - `src/ui.lua`: menus/HUD provisórios;
 - `src/save.lua`: persistência do protótipo;

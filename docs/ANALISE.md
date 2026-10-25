@@ -41,7 +41,7 @@ Conforme o relatório de extração incluído pelo próprio pacote:
 - terreno formado com tiles derivados de sprites originais;
 - bases azul e vermelha, quartel e fábrica;
 - soldados e tanques com combate em tempo real;
-- navegação A* em grade, movimentação e seleção de múltiplos soldados;
+- busca de caminho em grade (BFS provisório) em grade, movimentação e seleção de múltiplos soldados;
 - receita de créditos automática, custos e fila de produção;
 - oponente básico que treina unidades e investe contra o QG;
 - construção de quartéis, fábricas e torres, condição de vitória/derrota;
