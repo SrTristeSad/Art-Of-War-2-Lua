@@ -1,4 +1,6 @@
+local SafeTable=require('src.safe_table')
 local Save={}
+local SAVE_FORMAT=2
 local function encode(v,depth)
   depth=depth or 0
   assert(depth<60,'Estrutura de save excedeu profundidade permitida')
@@ -16,26 +18,36 @@ local function encode(v,depth)
   return table.concat(result)
 end
 function Save.write(world)
-  local copy={}
+  local copy={format=SAVE_FORMAT}
   for _,key in ipairs({'seed','mode','level','elapsed','money','income','entities',
-    'nextId','obstacles','terrain','camera','result','incomeTime','aiTime'}) do
+    'nextId','obstacles','terrain','camera','result','incomeTime','aiTime',
+    'rngState','tickRemainder'}) do
     copy[key]=world[key]
   end
-  for _,e in ipairs(copy.entities) do
-    -- The serializer retains current data; transient path cache is ignored at restore.
+  -- Do not serialize transient navigation caches or mutate live entities.
+  copy.entities={}
+  for _,e in ipairs(world.entities) do
+    local entity={}
+    for k,v in pairs(e) do
+      if k~='path' and k~='pathTime' then entity[k]=v end
+    end
+    copy.entities[#copy.entities+1]=entity
   end
   local ok,err=love.filesystem.write('save.lua','return '..encode(copy))
   return ok,err
 end
 function Save.read(World)
   if not love.filesystem.getInfo('save.lua') then return nil,'Nao existe jogo salvo' end
-  local chunk,err=love.filesystem.load('save.lua')
-  if not chunk then return nil,err end
-  local ok,data=pcall(chunk)
-  if not ok or type(data)~='table' then return nil,'Save invalido' end
+  local content,readError=love.filesystem.read('save.lua')
+  if not content then return nil,readError or 'Falha ao ler save' end
+  local data,errorMessage=SafeTable.decode(content)
+  if not data then return nil,'Save invalido: '..tostring(errorMessage) end
   if type(data.seed)~='number' or type(data.entities)~='table' or type(data.money)~='table' then return nil,'Save incompleto' end
+  if data.format and data.format~=SAVE_FORMAT then return nil,'Versao de save nao suportada' end
   local world=World.new(data.mode,data.level,data.seed)
   for k,v in pairs(data) do world[k]=v end
+  world.rngState=data.rngState or world.rngState
+  world.tickRemainder=data.tickRemainder or 0
   world.selected={};world.buildMode=nil;world.noticeTimer=0
   for _,e in ipairs(world.entities) do
     e.path=nil;e.pathTime=0

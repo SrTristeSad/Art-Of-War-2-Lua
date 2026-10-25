@@ -23,14 +23,14 @@ Quando não houver evidência suficiente, anotar explicitamente **provisório / 
 | 0. Inventário | Organizar JAD, PNGs, sprite sheets e lacunas documentadas | **Parcial** |
 | 1. Recuperar executável | JAR v1.12.0 correspondente ou APK da edição desejada; hashes e recursos | **Pendente** |
 | 2. Engenharia reversa | Classes, formatos de mapas/`d0`, tabelas `/a`, dados `m0`–`m5`, scripts e fontes | **Pendente** |
-| 3. Motor determinístico | Atualização, grade, pathfinding, colisão, visão e interações iguais ao original | **Protótipo não validado** |
+| 3. Motor determinístico | Atualização, grade, pathfinding, colisão, visão e interações iguais ao original | **Protótipo v0.2: tick fixo e regressões; paridade J2ME não validada** |
 | 4. RTS e progressão | Dinheiro, construção, produção, pesquisa, unidades, parâmetros, upgrades | **Protótipo parcial** |
 | 5. Inteligência artificial | Prioridades, alvos, ordens, defesa, agressividade e comportamento de missões | **Protótipo simples** |
 | 6. Interface 1:1 | Abertura, menus, HUD, comandos, seleção, telas, transições e fontes | **Pendente** |
 | 7. Conteúdo completo | Todos os mapas, missões, campanhas, eventos e condições de vitória | **Pendente** |
 | 8. Audiovisual | Animações, partículas, sprites corretos, efeitos sonoros e música | **Parcial** |
 | 9. Windows e Android | Mesma lógica em ambas as plataformas; comandos e renderização adaptados | **Windows e Android não validados em dispositivo** |
-| 10. Paridade final | Testes comparativos, correção de divergências e regressão | **Pendente** |
+| 10. Paridade final | Testes comparativos, correção de divergências e regressão | **Regressões locais v0.2; comparações 1:1 pendentes** |
 
 ## Matriz obrigatória de fidelidade
 
@@ -58,3 +58,17 @@ Quando não houver evidência suficiente, anotar explicitamente **provisório / 
 Não encerrar o projeto só porque o jogo abre, move tropas ou vence uma partida. Cada item da matriz precisa de evidência comparativa; nenhuma funcionalidade relevante do original pode ser omitida, substituída por uma aproximação permanente ou inventada sem identificação explícita. Problemas de fidelidade têm prioridade sobre funcionalidades novas.
 
 **Marco imediato:** obter `artofwea_S8000.jar` correspondente ao manifesto ou APK equivalente; identificar tabelas/mapas/classes e substituir o cenário de demonstração pelos dados originais. Sem esses binários, qualquer afirmação de paridade completa seria incorreta.
+
+## Marco v0.2 — integridade do núcleo provisório
+
+As correções abaixo são **engenharia de robustez**, não equivalência comprovada com o JAR:
+
+- Atualização em passos fixos de 1/30 s, com entrada de `dt` limitada em pausas longas;
+- Busca de caminho por células, sem atravessar paredes quando um destino não possui rota;
+- Ordens de esquadrão distribuídas em células distintas e livres;
+- Validação de sobreposição de construções com tropas e obstáculos;
+- RNG pseudoaleatório com estado persistido para reprodutibilidade após carregar;
+- Save restaurando acumulador de simulação e sem execução de Lua do arquivo externo;
+- Regressões automatizadas (caminhos, economia, movimento, construção, save e UI mock).
+
+**Limitações:** o bloqueio por células e o espaçamento ainda são provisórios; não reproduzem algoritmos que ainda não foram extraídos do JAR. O LÖVE real e o Android seguem aguardando teste manual. A prioridade seguinte continua sendo recuperar os dados binários originais e verificar o atlas e o HUD lado a lado.

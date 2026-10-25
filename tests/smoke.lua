@@ -6,7 +6,7 @@ setmetatable(graphics,{__index=function(_,name) return function(...) end end})
 local saveData
 love={
  graphics=graphics,
- filesystem={getInfo=function()return nil end,write=function(_,data)saveData=data;return true end,load=function()return load(saveData or '')end},
+ filesystem={getInfo=function()return saveData and {} or nil end,write=function(_,data)saveData=data;return true end,read=function()return saveData end},
  keyboard={isDown=function()return false end},
  event={quit=function()end},
 }
@@ -21,6 +21,7 @@ love.mousepressed(200,320,1);love.mousereleased(200,320,1)
 love.mousepressed(320,410,2)
 love.update(.05);love.draw()
 love.keypressed('f5')
+love.keypressed('f9')
 love.keypressed('escape');love.draw()
 love.keypressed('escape');love.draw()
 print('LOVE UI MOCK PASSED')

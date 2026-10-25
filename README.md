@@ -2,7 +2,7 @@
 
 > **OBJETIVO PRINCIPAL: reconstruir o jogo original com fidelidade 1:1**, substituindo o motor Java ME pelo **Lua + LÖVE**, sem transformar a experiência em outro jogo.
 >
-> **ESTADO ATUAL: protótipo técnico v0.1, NÃO É 1:1.** Os sistemas provisórios são ferramentas de desenvolvimento e serão substituídos à medida que o comportamento original for verificado.
+> **ESTADO ATUAL: protótipo técnico v0.2, NÃO É 1:1.** Os sistemas provisórios são ferramentas de desenvolvimento e serão substituídos à medida que o comportamento original for verificado.
 
 ## Princípio do projeto (não negociável)
 
@@ -12,9 +12,9 @@ A referência técnica disponível é o descritor **J2ME v1.12.0** (`docs/manife
 
 **Leia o [MAPA_DO_PROJETO.md](MAPA_DO_PROJETO.md)** para ver as fases, as metas de fidelidade e os critérios de conclusão.
 
-## Estado real da v0.1
+## Estado real da v0.2
 
-**Existe:** menu básico, cenário provisório, bases de dois lados, soldados e tanques, treino/construção, economia automática, navegação A*, inimigo simples, minimapa, mouse/teclado/toque, save/load e sprites extraídos fornecidos pelo usuário.
+**Existe:** motor em tick fixo de 30 Hz, navegação em grade sem atravessar paredes, formação de esquadrão, construção com checagem de colisões, saves legados compatíveis com parser restrito, testes de regressão; menu básico, cenário provisório, bases de dois lados, soldados e tanques, treino/construção, economia automática, navegação A*, inimigo simples, minimapa, mouse/teclado/toque, save/load e sprites extraídos fornecidos pelo usuário.
 
 **Ainda não é fiel ao original:** campanhas/missões, mapas e scripts autênticos, comportamento de IA, parâmetros exatos, evolução tecnológica, todos os tipos de unidades/edifícios, HUD e menus originais, animações e efeitos completos, áudio e sincronização de simulação. Não apresentar essas partes do protótipo como engenharia reversa concluída.
 
@@ -56,7 +56,13 @@ O protótipo recebe eventos de toque; ainda não foi empacotado nem validado com
 - `docs/ANALISE.md`: evidências, inventário e lacunas da extração;
 - `docs/manifest_original.jad`: manifesto de referência;
 - `tools/inventory_jar.py`: inventário de JAR e recursos sem executá-lo;
-- `tests/smoke.lua`: verificação da lógica provisória.
+- `tests/smoke.lua`: verificação de telas/eventos com mock de LÖVE;
+- `tests/core_regression.lua`: regressões de navegação, economia, ordens e save;
+- `src/safe_table.lua`: leitura restrita de saves sem executar conteúdo.
+
+## Regressões (sem LÖVE)
+
+No diretório do jogo com Lua 5.3: `lua tests/core_regression.lua` e `lua tests/smoke.lua`. Os testes também rodam por GitHub Actions a cada push. A aprovação desses testes não garante renderização correta, reprodução visual 1:1 nem execução em dispositivo real.
 
 ## Critério de conclusão
 

@@ -11,11 +11,6 @@ local STATS={
   turret={cost=200,hp=330,size=31,range=100,dmg=14,cooldown=0.84},
 }
 local function distance(x,y,a,b) return math.sqrt((x-a)^2+(y-b)^2) end
-local function fcenter(e) return e.x, e.y end
-local function deep(value)
-  if type(value)~='table' then return value end
-  local out={};for k,v in pairs(value) do out[k]=deep(v) end;return out
-end
 function World.new(mode,level,seed)
   local self=setmetatable({},World)
   self.mode=mode or 'scenario';self.level=level or 1
@@ -25,11 +20,8 @@ function World.new(mode,level,seed)
   self.buildMode=nil;self.notice='';self.noticeTimer=0
   self.camera={x=15,y=108};self.aiTime=0;self.incomeTime=0
   self.terrain={};self.blocked={};self.obstacles={};self.queues={}
-  local seedvar=self.seed
-  local function rand(n)
-    seedvar=(seedvar*1103515245+12345)%2147483647
-    return (seedvar%n)+1
-  end
+  self.tickRemainder=0;self.rngState=self.seed
+  local function rand(n) return self:random(n) end
   self.rand=rand
   for y=1,self.h do
     self.terrain[y]={}
@@ -63,6 +55,11 @@ function World.new(mode,level,seed)
   self:add('tank',2,(self.w-11)*SIZE,(self.h-17)*SIZE)
   self:toast('Missao experimental: destrua o QG inimigo.')
   return self
+end
+function World:random(n)
+  -- Record RNG state so loading a game preserves subsequent AI decisions.
+  self.rngState=(self.rngState*48271)%2147483647
+  return (self.rngState%n)+1
 end
 function World:toast(message)
   self.notice=message;self.noticeTimer=4.5
@@ -131,31 +128,71 @@ function World:selectedList()
   return list
 end
 function World:moveSelected(x,y)
-  local n=0
-  local target=self:entityAt(x,y)
+  local units={}
   for _,e in ipairs(self:selectedList()) do
-    if not e.building then
-      local goal={x=x,y=y,target=target and target.team~=e.team and target.id or nil}
-      e.order=goal;e.path=nil;e.pathTime=0;n=n+1
+    if not e.building then units[#units+1]=e end
+  end
+  if #units==0 then return end
+  local target=self:entityAt(x,y)
+  if target and target.team==1 then target=nil end
+  self:refreshBlocked()
+  local destinations={}
+  if not target then
+    -- Give each selected soldier a separate cell near the click. Do not
+    -- stack an entire squad onto the same exact world coordinate.
+    local cx=math.floor(x/SIZE+.5);local cy=math.floor(y/SIZE+.5)
+    for radius=0,math.max(self.w,self.h) do
+      for dy=-radius,radius do for dx=-radius,radius do
+        if math.max(math.abs(dx),math.abs(dy))==radius then
+          local gx,gy=cx+dx,cy+dy
+          if gx>=1 and gy>=1 and gx<=self.w and gy<=self.h
+             and not self.blocked[gy*self.w+gx] then
+            destinations[#destinations+1]={x=gx*SIZE,y=gy*SIZE}
+          end
+        end
+      end end
+      if #destinations>=#units then break end
     end
   end
-  if n>0 then self:toast(n..' unidades receberam ordens.') end
+  for _,e in ipairs(units) do
+    local goal={x=x,y=y,target=target and target.id or nil}
+    if not target and #destinations>0 then
+      local closest=1;local distanceSquared=math.huge
+      for i,spot in ipairs(destinations) do
+        local d=(spot.x-e.x)^2+(spot.y-e.y)^2
+        if d<distanceSquared then distanceSquared=d;closest=i end
+      end
+      local spot=table.remove(destinations,closest)
+      goal.x,goal.y=spot.x,spot.y
+    end
+    e.order=goal;e.path=nil;e.pathTime=0
+  end
+  self:toast(#units..' unidades receberam ordens.')
 end
 function World:cost(kind) return STATS[kind] and STATS[kind].cost or 0 end
-function World:canBuild(x,y)
-  if x<40 or y<40 or x>self.w*SIZE-40 or y>self.h*SIZE-40 then return false end
-  for _,e in ipairs(self.entities) do
-    if e.alive and e.building and distance(x,y,e.x,e.y)<72 then return false end
+function World:canBuild(x,y,kind)
+  local st=STATS[kind or 'barracks']
+  local radius=(st.size or 46)*0.55
+  if x<radius or y<radius or x>self.w*SIZE-radius or y>self.h*SIZE-radius then
+    return false
   end
+  -- Building footprints must not overlap rocks, forests, troops or other
+  -- structures. Previous implementation only checked structure centers.
   for _,o in ipairs(self.obstacles) do
-    if distance(x,y,o.x*SIZE,o.y*SIZE)<32 then return false end
+    if distance(x,y,o.x*SIZE,o.y*SIZE)<radius+12 then return false end
+  end
+  for _,e in ipairs(self.entities) do
+    if e.alive and distance(x,y,e.x,e.y)<radius+STATS[e.kind].size*.5 then
+      return false
+    end
   end
   return true
 end
 function World:placeBuilding(kind,x,y)
   if not STATS[kind] or (kind~='barracks' and kind~='factory' and kind~='turret') then return false end
   if self.money[1]<self:cost(kind) then self:toast('Creditos insuficientes.');return false end
-  if not self:canBuild(x,y) then self:toast('Local bloqueado para construcao.');return false end
+  x=math.floor(x/SIZE+.5)*SIZE;y=math.floor(y/SIZE+.5)*SIZE
+  if not self:canBuild(x,y,kind) then self:toast('Local bloqueado para construcao.');return false end
   self.money[1]=self.money[1]-self:cost(kind)
   self:add(kind,1,x,y);self.buildMode=nil
   self:toast('Edificio construido.')
@@ -203,41 +240,60 @@ function World:nearestEnemy(e,range)
 end
 function World:navigate(e,x,y,dt)
   local st=STATS[e.kind]
-  if not e.path or #e.path==0 or (e.pathTime or 0)<=0 then
+  if not e.path or (e.pathTime or 0)<=0 then
     self:refreshBlocked()
     local sx=math.floor(e.x/SIZE+.5);local sy=math.floor(e.y/SIZE+.5)
     local gx=math.floor(x/SIZE+.5);local gy=math.floor(y/SIZE+.5)
     e.path=Path.search(self,sx,sy,gx,gy)
-    e.pathTime=2.3
+    e.pathTime=1.5
   end
   e.pathTime=e.pathTime-dt
-  local tx,ty=x,y
-  if e.path and #e.path>0 then
-    local nextCell=e.path[1]
-    tx=nextCell.x*SIZE;ty=nextCell.y*SIZE
-    if distance(e.x,e.y,tx,ty)<5 then table.remove(e.path,1) end
+  -- nil = unreachable; {} = no remaining waypoints. Neither means that
+  -- the unit is entitled to walk directly through an obstacle.
+  if not e.path then return false end
+  while #e.path>0 do
+    local waypoint=e.path[1]
+    if distance(e.x,e.y,waypoint.x*SIZE,waypoint.y*SIZE)<1.5 then
+      table.remove(e.path,1)
+    else break end
   end
+  if #e.path==0 then
+    local gx=math.floor(x/SIZE+.5);local gy=math.floor(y/SIZE+.5)
+    if gx>=1 and gx<=self.w and gy>=1 and gy<=self.h
+       and not self.blocked[gy*self.w+gx] then
+      -- Finish a free ground order with sub-tile precision.
+      local d=distance(e.x,e.y,x,y)
+      if d<2 then return true end
+    else return true end
+  end
+  local waypoint=e.path[1]
+  local tx,ty=waypoint and waypoint.x*SIZE or x,waypoint and waypoint.y*SIZE or y
   local d=distance(e.x,e.y,tx,ty)
-  if d>2 then
-    -- Nao atravesse rochas, arvores ou edificios. A* replaneja se bloqueado.
-    local testX=e.x+(tx-e.x)/d*math.min(st.speed*dt,d)
-    local testY=e.y+(ty-e.y)/d*math.min(st.speed*dt,d)
-    local cx=math.floor(testX/SIZE+.5)
-    local cy=math.floor(testY/SIZE+.5)
-    if self.blocked[cy*self.w+cx] then
-      e.path=nil;e.pathTime=0
-      return
-    end
-    local angle=math.atan2 and math.atan2(ty-e.y,tx-e.x) or math.atan(ty-e.y,tx-e.x)
-    local speed=st.speed*dt
-    e.x=e.x+math.cos(angle)*math.min(speed,d)
-    e.y=e.y+math.sin(angle)*math.min(speed,d)
-    e.angle=angle
+  if d<=0.001 then return true end
+  local step=math.min(st.speed*dt,d)
+  local nx=e.x+(tx-e.x)*step/d;local ny=e.y+(ty-e.y)*step/d
+  local cx=math.floor(nx/SIZE+.5);local cy=math.floor(ny/SIZE+.5)
+  if cx<1 or cy<1 or cx>self.w or cy>self.h or self.blocked[cy*self.w+cx] then
+    e.path=nil;e.pathTime=0;return false
   end
+  e.angle=(math.atan2 and math.atan2(ty-e.y,tx-e.x)) or math.atan(ty-e.y,tx-e.x)
+  e.x,e.y=nx,ny
+  return true
 end
 function World:update(dt)
   if self.result then return end
-  dt=math.min(dt,0.08)
+  -- Fixed simulation tick. Rendering frame rate must not control how often
+  -- income, movement, construction or attacks are calculated.
+  self.tickRemainder=(self.tickRemainder or 0)+math.min(math.max(dt,0),.25)
+  local tick=1/30
+  local steps=0
+  while self.tickRemainder+1e-9>=tick and steps<8 and not self.result do
+    self.tickRemainder=self.tickRemainder-tick
+    self:_tick(tick)
+    steps=steps+1
+  end
+end
+function World:_tick(dt)
   self.elapsed=self.elapsed+dt
   self.noticeTimer=math.max(0,self.noticeTimer-dt)
   self.incomeTime=self.incomeTime+dt
@@ -251,7 +307,7 @@ function World:update(dt)
   end
   self.aiTime=self.aiTime+dt
   if self.aiTime>=4 then
-    self.aiTime=0
+    self.aiTime=self.aiTime-4
     local enemyCount=0
     for _,e in ipairs(self.entities) do if e.alive and e.team==2 and not e.building then enemyCount=enemyCount+1 end end
     if enemyCount<42 then
@@ -271,7 +327,7 @@ function World:update(dt)
     for _,e in ipairs(self.entities) do if e.alive and e.kind=='hq' and e.team==1 then home=e;break end end
     if home then
       for _,e in ipairs(self.entities) do
-        if e.alive and e.team==2 and not e.building and (not e.order or self.rand(3)==1) then
+        if e.alive and e.team==2 and not e.building and (not e.order or self:random(3)==1) then
           e.order={x=home.x,y=home.y,target=home.id};e.path=nil;e.pathTime=0
         end
       end
@@ -313,7 +369,8 @@ function World:update(dt)
             local tx=goal and goal.x or o.x
             local ty=goal and goal.y or o.y
             if distance(e.x,e.y,tx,ty)>(goal and st.range*0.8 or 6) then
-              self:navigate(e,tx,ty,dt)
+              local moved=self:navigate(e,tx,ty,dt)
+              if moved and not goal and distance(e.x,e.y,tx,ty)<6 then e.order=nil end
             elseif not goal then e.order=nil end
           end
         end
