@@ -1,0 +1,12 @@
+# Saidas locais, caches e saves
+tmp/
+*.log
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+*.bak
+*.swp
+*_re_inventory/
+*.love
+*.zip
