@@ -26,11 +26,11 @@ Quando não houver evidência suficiente, anotar explicitamente **provisório / 
 | 3. Motor determinístico | Atualização, grade, pathfinding, colisão, visão e interações iguais ao original | **Protótipo v0.2: tick fixo e regressões; paridade J2ME não validada** |
 | 4. RTS e progressão | Dinheiro, construção, produção, pesquisa, unidades, parâmetros, upgrades | **Protótipo parcial** |
 | 5. Inteligência artificial | Prioridades, alvos, ordens, defesa, agressividade e comportamento de missões | **Protótipo simples** |
-| 6. Interface 1:1 | Abertura, menus, HUD, comandos, seleção, telas, transições e fontes | **Pendente** |
+| 6. Interface 1:1 | Abertura, menus, HUD, comandos, seleção, telas, transições e fontes | **HUD provisório v0.3; tela 1:1 pendente** |
 | 7. Conteúdo completo | Todos os mapas, missões, campanhas, eventos e condições de vitória | **Pendente** |
-| 8. Audiovisual | Animações, partículas, sprites corretos, efeitos sonoros e música | **Parcial** |
+| 8. Audiovisual | Animações, partículas, sprites corretos, efeitos sonoros e música | **Protótipo v0.3: PNG proporcional, camadas, eventos FX e pipeline de quadros opcionais; material original incompleto** |
 | 9. Windows e Android | Mesma lógica em ambas as plataformas; comandos e renderização adaptados | **Windows e Android não validados em dispositivo** |
-| 10. Paridade final | Testes comparativos, correção de divergências e regressão | **Regressões locais v0.2; comparações 1:1 pendentes** |
+| 10. Paridade final | Testes comparativos, correção de divergências e regressão | **Regressões locais v0.3; comparações 1:1 pendentes** |
 
 ## Matriz obrigatória de fidelidade
 
@@ -72,3 +72,15 @@ As correções abaixo são **engenharia de robustez**, não equivalência compro
 - Regressões automatizadas (caminhos, economia, movimento, construção, save e UI mock).
 
 **Limitações:** o bloqueio por células e o espaçamento ainda são provisórios; não reproduzem algoritmos que ainda não foram extraídos do JAR. O LÖVE real e o Android seguem aguardando teste manual. A prioridade seguinte continua sendo recuperar os dados binários originais e verificar o atlas e o HUD lado a lado.
+
+## Marco v0.3 — interface visual e efeitos provisórios
+
+- Sprite de unidades e edifícios conserva a proporção real do arquivo de imagem, evitando esticamento vertical/horizontal;
+- Entidades são desenhadas do fundo para a frente pela coordenada Y e ganham sombra no solo;
+- Indicador temporário de destino, impacto e explosão; sem uso do RNG da simulação para efeitos;
+- Prévia verde/vermelha para construções, usando `canBuild` existente, sem cobrar créditos antes da confirmação;
+- Carregamento opcional de frames `idle`, `walk`, `attack`, `death` em `assets/animations`; quando ausentes usa-se PNG estático com oscilação mínima provisória;
+- Efeitos são transitórios: não modificam save nem alteram o estado de mundo usado pelas regras;
+- Testes de proporção, quadros, efeitos, desenho, save e compatibilidade com saves anteriores.
+
+**Limite de fidelidade:** a composição do HUD, cadência visual e ordem de animações NÃO foram reconstruídas do bytecode J2ME. Ainda falta executar os novos visuais no LÖVE Windows/Android e verificar contra capturas do jogo real. A prioridade 1 continua sendo obter o JAR referente ao JAD.

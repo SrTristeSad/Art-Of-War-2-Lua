@@ -55,12 +55,12 @@ local function act(id)
   elseif id=='restart' then if game then start(game.mode,game.level) end
   elseif id=='save' then if game then local ok,err=Save.write(game);game:toast(ok and 'Jogo salvo.' or tostring(err)) end
   elseif game and not paused and not game.result then
-    if id=='build_barracks' then game.buildMode='barracks';game:toast('Escolha um local vazio no mapa.')
-    elseif id=='build_factory' then game.buildMode='factory';game:toast('Escolha um local vazio no mapa.')
-    elseif id=='build_turret' then game.buildMode='turret';game:toast('Escolha um local vazio no mapa.')
+    if id=='build_barracks' then game.buildMode='barracks';game.preview=nil;game:toast('Escolha um local vazio no mapa.')
+    elseif id=='build_factory' then game.buildMode='factory';game.preview=nil;game:toast('Escolha um local vazio no mapa.')
+    elseif id=='build_turret' then game.buildMode='turret';game.preview=nil;game:toast('Escolha um local vazio no mapa.')
     elseif id=='train_infantry' then game:train(currentSelectedBuilding(),'infantry')
     elseif id=='train_tank' then game:train(currentSelectedBuilding(),'tank')
-    elseif id=='cancel' then game:select(nil);game.buildMode=nil end
+    elseif id=='cancel' then game:select(nil);game.buildMode=nil;game.preview=nil end
   end
 end
 function love.load()
@@ -122,17 +122,29 @@ local function pointerDown(px,py,button,touch)
   end
   if y<26 or y>=256 then return end
   local wx,wy=mapCoords(x,y)
-  if button==2 then game:moveSelected(wx,wy);return end
+  if button==2 then
+    if game.buildMode then game.buildMode=nil;game.preview=nil
+    else game:moveSelected(wx,wy) end
+    return
+  end
   if button==3 then drag={panning=true,x=x,y=y};return end
   if game.buildMode then
     game:placeBuilding(game.buildMode,wx,wy)
+    game.preview=nil
     return
   end
   drag={x=x,y=y,currentX=x,currentY=y,worldX=wx,worldY=wy,selecting=false,touch=touch}
 end
 local function pointerMove(px,py)
-  if not drag or not game then return end
+  if not game or screen~='game' then return end
   local x,y=viewCoords(px,py)
+  if game.buildMode and not paused then
+    if x>=0 and x<240 and y>=26 and y<256 then
+      local wx,wy=mapCoords(x,y)
+      game.preview={x=math.floor(wx/16+.5)*16,y=math.floor(wy/16+.5)*16}
+    else game.preview=nil end
+  end
+  if not drag then return end
   if drag.panning then
     game.camera.x=game.camera.x-(x-drag.x)
     game.camera.y=game.camera.y-(y-drag.y)
@@ -201,7 +213,7 @@ function love.keypressed(key)
   if key=='escape' then
     if screen=='help' then screen='menu'
     elseif screen=='game' and game then
-      if game.buildMode then game.buildMode=nil
+      if game.buildMode then game.buildMode=nil;game.preview=nil
       elseif game.result then screen='menu';game=nil
       else paused=not paused end
     else love.event.quit() end

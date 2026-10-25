@@ -1,4 +1,5 @@
 local Art = require('src.art')
+local Animation = require('src.animation')
 local Path = require('src.path')
 local World = {}; World.__index=World
 local SIZE=16
@@ -21,6 +22,7 @@ function World.new(mode,level,seed)
   self.camera={x=15,y=108};self.aiTime=0;self.incomeTime=0
   self.terrain={};self.blocked={};self.obstacles={};self.queues={}
   self.tickRemainder=0;self.rngState=self.seed
+  self.effects={};self.preview=nil
   local function rand(n) return self:random(n) end
   self.rand=rand
   for y=1,self.h do
@@ -92,7 +94,8 @@ function World:add(kind,team,x,y)
   self.nextId=self.nextId+1
   local b=kind=='hq' or kind=='barracks' or kind=='factory' or kind=='turret'
   local e={id=self.nextId,kind=kind,team=team,x=x,y=y,hp=st.hp,maxhp=st.hp,
-    building=b,alive=true,cooldown=0,queue=0,production=0,angle=0,order=nil,path=nil}
+    building=b,alive=true,cooldown=0,queue=0,production=0,angle=0,order=nil,path=nil,
+    animTime=0,firePulse=0,hitPulse=0}
   self.entities[#self.entities+1]=e
   if b then self:refreshBlocked() end
   return e
@@ -167,6 +170,7 @@ function World:moveSelected(x,y)
     end
     e.order=goal;e.path=nil;e.pathTime=0
   end
+  self:effect('order',x,y,0.65)
   self:toast(#units..' unidades receberam ordens.')
 end
 function World:cost(kind) return STATS[kind] and STATS[kind].cost or 0 end
@@ -293,7 +297,18 @@ function World:update(dt)
     steps=steps+1
   end
 end
+function World:effect(kind,x,y,lifetime)
+  self.effects=self.effects or {}
+  if #self.effects>=80 then table.remove(self.effects,1) end
+  self.effects[#self.effects+1]={kind=kind,x=x,y=y,age=0,duration=lifetime or 0.5}
+end
 function World:_tick(dt)
+  self.effects=self.effects or {}
+  for i=#self.effects,1,-1 do
+    local fx=self.effects[i]
+    fx.age=fx.age+dt
+    if fx.age>=fx.duration then table.remove(self.effects,i) end
+  end
   self.elapsed=self.elapsed+dt
   self.noticeTimer=math.max(0,self.noticeTimer-dt)
   self.incomeTime=self.incomeTime+dt
@@ -336,6 +351,9 @@ function World:_tick(dt)
   for _,e in ipairs(self.entities) do
     if e.alive then
       e.cooldown=math.max(0,e.cooldown-dt)
+      e.animTime=(e.animTime or 0)+dt
+      e.firePulse=math.max(0,(e.firePulse or 0)-dt)
+      e.hitPulse=math.max(0,(e.hitPulse or 0)-dt)
       if e.building and e.queue>0 then
         e.production=e.production-dt
         if e.production<=0 then
@@ -352,8 +370,18 @@ function World:_tick(dt)
         local enemy,d=self:nearestEnemy(e,st.range)
         if enemy and e.cooldown==0 then
           enemy.hp=enemy.hp-st.dmg;e.cooldown=st.cooldown
+          e.firePulse=0.15
+          if not e.building then
+            e.angle=(math.atan2 and math.atan2(enemy.y-e.y,enemy.x-e.x))
+              or math.atan(enemy.y-e.y,enemy.x-e.x)
+          end
+          enemy.hitPulse=0.16
+          -- Visual-only events never consume gameplay RNG.
+          self:effect('impact',enemy.x,enemy.y,0.22)
           if enemy.hp<=0 then
             enemy.hp=0;enemy.alive=false;self.selected[enemy.id]=nil
+            self:effect('explosion',enemy.x,enemy.y,0.55)
+            if enemy.building then self:refreshBlocked() end
             if enemy.kind=='hq' then self.result=enemy.team==2 and 'VITORIA' or 'DERROTA' end
           end
         end
@@ -399,32 +427,74 @@ function World:draw(camx,camy,viewH)
   love.graphics.setStencilTest("greater",0)
   love.graphics.push();love.graphics.translate(0,26)
   self:drawTerrain(camx,camy,viewH)
-  for _,e in ipairs(self.entities) do
-    if e.alive then
-      local sx=e.x-camx;local sy=e.y-camy
-      local sz=STATS[e.kind].size
-      if sx>-80 and sx<320 and sy>-80 and sy<viewH+80 then
-        if self.selected[e.id] then
-          love.graphics.setColor(.34,1,.25,.8)
-          love.graphics.circle('line',sx,sy,sz*.6)
-          love.graphics.setColor(1,1,1,1)
-        end
-        local artName=(e.team==1 and 'blue_' or 'red_')..e.kind
-        if e.building then
-          Art.draw(artName,sx-sz*.5,sy-sz*.55,sz,sz)
-        else
-          Art.draw(artName,sx-sz*.5,sy-sz*.5,sz,sz,e.angle)
-        end
-        if e.hp<e.maxhp or self.selected[e.id] then
-          local ww=math.max(12,sz*.8)
-          love.graphics.setColor(.08,.08,.09,.95)
-          love.graphics.rectangle('fill',sx-ww/2,sy-sz*.7-5,ww,3)
-          love.graphics.setColor(e.team==1 and .2 or .95,e.team==1 and .9 or .3,.2,1)
-          love.graphics.rectangle('fill',sx-ww/2,sy-sz*.7-5,ww*e.hp/e.maxhp,3)
-          love.graphics.setColor(1,1,1,1)
-        end
+  local drawable={}
+  for _,e in ipairs(self.entities) do if e.alive then drawable[#drawable+1]=e end end
+  -- Draw back-to-front so the soldier behind a tall building is occluded.
+  table.sort(drawable,function(a,b)
+    if a.y==b.y then return a.id<b.id end
+    return a.y<b.y
+  end)
+  for _,e in ipairs(drawable) do
+    local sx,sy=e.x-camx,e.y-camy
+    local size=STATS[e.kind].size
+    if sx>-80 and sx<320 and sy>-80 and sy<viewH+80 then
+      love.graphics.setColor(0,0,0,.23)
+      love.graphics.ellipse('fill',sx,sy+size*.28,size*.40,size*.15)
+      love.graphics.setColor(1,1,1,1)
+      if self.selected[e.id] then
+        love.graphics.setColor(.34,1,.25,.85)
+        love.graphics.circle('line',sx,sy,size*.6)
+        love.graphics.setColor(1,1,1,1)
+      end
+      local state=Animation.state(e)
+      local offset=e.building and 0 or Animation.offset(state,e.animTime or 0)
+      local artName=(e.team==1 and 'blue_' or 'red_')..e.kind
+      local opacity=(e.hitPulse or 0)>0 and .67 or 1
+      local rotation=e.building and 0 or e.angle
+      Art.drawEntity(artName,sx,sy+offset,size,size,rotation,opacity,state,e.animTime)
+      if (e.firePulse or 0)>0 then
+        love.graphics.setColor(1,.75,.2,math.min(1,e.firePulse/.15))
+        love.graphics.circle('fill',sx+math.cos(e.angle)*size*.43,
+          sy+math.sin(e.angle)*size*.43,2.4)
+        love.graphics.setColor(1,1,1,1)
+      end
+      if e.hp<e.maxhp or self.selected[e.id] then
+        local ww=math.max(12,size*.8)
+        love.graphics.setColor(.08,.08,.09,.95)
+        love.graphics.rectangle('fill',sx-ww/2,sy-size*.7-5,ww,3)
+        love.graphics.setColor(e.team==1 and .2 or .95,e.team==1 and .9 or .3,.2,1)
+        love.graphics.rectangle('fill',sx-ww/2,sy-size*.7-5,ww*e.hp/e.maxhp,3)
+        love.graphics.setColor(1,1,1,1)
       end
     end
+  end
+  for _,fx in ipairs(self.effects or {}) do
+    local x,y=fx.x-camx,fx.y-camy
+    local p=math.min(1,fx.age/fx.duration)
+    if x>-48 and x<288 and y>-48 and y<viewH+48 then
+      if fx.kind=='explosion' then
+        Art.drawEntity('explosion',x,y,18+24*p,18+24*p,0,1-p,'death',fx.age)
+      elseif fx.kind=='impact' then
+        love.graphics.setColor(1,.79,.23,(1-p)*.8)
+        love.graphics.circle('line',x,y,2+5*p)
+      elseif fx.kind=='order' then
+        love.graphics.setColor(.3,1,.4,1-p)
+        love.graphics.circle('line',x,y,4+8*p)
+        love.graphics.line(x-5,y,x+5,y)
+        love.graphics.line(x,y-5,x,y+5)
+      end
+      love.graphics.setColor(1,1,1,1)
+    end
+  end
+  if self.buildMode and self.preview then
+    local x,y=self.preview.x-camx,self.preview.y-camy
+    local valid=self:canBuild(self.preview.x,self.preview.y,self.buildMode)
+      and self.money[1]>=self:cost(self.buildMode)
+    local size=STATS[self.buildMode].size
+    love.graphics.setColor(valid and .22 or 1, valid and 1 or .2,.25,.73)
+    love.graphics.rectangle('line',x-size*.5,y-size*.5,size,size)
+    love.graphics.setColor(1,1,1,1)
+    Art.drawEntity('blue_'..self.buildMode,x,y,size,size,0,.52,'idle',0)
   end
   love.graphics.pop();love.graphics.setStencilTest()
 end

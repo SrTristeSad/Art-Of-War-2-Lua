@@ -36,7 +36,7 @@ function UI.menu(game)
   UI.button('scenario','BATALHA LIVRE',30,168,180,27,false)
   UI.button('load','CONTINUAR',30,203,180,27,not love.filesystem.getInfo('save.lua'))
   UI.button('help','CONTROLES',30,238,180,27,false)
-  text('PROTOTIPO v0.2  |  J2ME 1.12.0',31,293,10,{.77,.83,.88})
+  text('PROTOTIPO v0.3  |  J2ME 1.12.0',31,293,10,{.77,.83,.88})
 end
 function UI.help()
   UI.newFrame()
@@ -51,6 +51,7 @@ function UI.help()
     'Arrastar com mouse do meio: mapa.',
     'Toque: seleciona / ordena.',
     'Arrastar no celular: pan no mapa.',
+    'Previa verde/vermelha: construir.',
     'Q/E/T: preparar construcao.',
     'I: treinar soldado (quartel).',
     'K: produzir tanque (fabrica).',
@@ -58,7 +59,7 @@ function UI.help()
     'ESC: pausar / voltar ao menu.',
     'Renda de creditos automatica.',
   }
-  for i,s in ipairs(items) do text(s,11,50+(i-1)*16) end
+  for i,s in ipairs(items) do text(s,11,46+(i-1)*15) end
   UI.button('menu','VOLTAR',53,283,134,27,false,true)
 end
 function UI.hud(world,paused)
@@ -94,7 +95,7 @@ function UI.hud(world,paused)
     UI.button('build_barracks','QRT $340',64,278,54,18,world.money[1]<340)
     UI.button('build_factory','FAB $460',122,278,54,18,world.money[1]<460)
     UI.button('build_turret','TOR $200',180,278,56,18,world.money[1]<200)
-    text('Esc: cancela construcao',70,301,9,{.65,.81,.9})
+    text(world.buildMode and 'Clique para posicionar | Esc cancela' or 'Q/E/T: construir | Toque: mover',65,301,9,{.65,.81,.9})
   end
   if world.noticeTimer>0 then
     local w=math.min(236,lg.getFont():getWidth(world.notice)+12)
@@ -119,7 +120,7 @@ function UI.minimap(world,x,y,w,h)
   lg.setColor(.16,.27,.22,1);lg.rectangle('fill',x,y,w,h)
   for _,o in ipairs(world.obstacles) do
     lg.setColor(.08,.14,.11,1)
-    lg.points(x+(o.x/world.w)*w,y+(o.y/world.h)*h)
+    lg.points(x+((o.x-.5)/world.w)*w,y+((o.y-.5)/world.h)*h)
   end
   for _,e in ipairs(world.entities) do
     if e.alive then
