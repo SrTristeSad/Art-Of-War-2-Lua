@@ -1,0 +1,11 @@
+MIDlet-Touch-Support: TRUE
+MIDlet-1: Art Of War 2 - Global Confederation, icon.png, aow2
+MIDlet-Icon: icon.png
+MIDlet-Name: Art Of War 2 - Global Confederation
+MIDlet-Vendor: HeroCraft
+MIDlet-Version: 1.12.0
+MIDlet-Data-Size: 8192
+MIDlet-Info-URL: http://www.herocraft.com
+MIDlet-Install-Notify: http://
+MIDlet-Jar-Size: 546006
+MIDlet-Jar-URL: http://dedomil.net/games/2512/download-jar/22816
