@@ -2,7 +2,7 @@
 
 > **OBJETIVO PRINCIPAL: reconstruir o jogo original com fidelidade 1:1**, substituindo o motor Java ME pelo **Lua + LÖVE**, sem transformar a experiência em outro jogo.
 >
-> **ESTADO ATUAL: protótipo técnico v0.3, NÃO É 1:1.** Os sistemas provisórios são ferramentas de desenvolvimento e serão substituídos à medida que o comportamento original for verificado.
+> **ESTADO ATUAL: protótipo técnico v0.4, NÃO É 1:1.** Os sistemas provisórios são ferramentas de desenvolvimento e serão substituídos à medida que o comportamento original for verificado.
 
 ## Princípio do projeto (não negociável)
 
@@ -12,9 +12,9 @@ A referência técnica disponível é o descritor **J2ME v1.12.0** (`docs/manife
 
 **Leia o [MAPA_DO_PROJETO.md](MAPA_DO_PROJETO.md)** para ver as fases, as metas de fidelidade e os critérios de conclusão.
 
-## Estado real da v0.3
+## Estado real da v0.4
 
-**Existe:** arte de unidades e edifícios sem deformação da proporção original dos recortes PNG; ordem de desenho por profundidade; prévia de construção e feedback visual temporário de deslocamento, ataque e destruição; pipeline para quadros de animação opcionais (ainda não recuperados do JAR). Motor em tick fixo de 30 Hz, navegação em grade sem atravessar paredes, formação de esquadrão, construção com checagem de colisões, saves legados compatíveis com parser restrito, testes de regressão; menu básico, cenário provisório, bases de dois lados, soldados e tanques, treino/construção, economia automática, navegação A*, inimigo simples, minimapa, mouse/teclado/toque, save/load e sprites extraídos fornecidos pelo usuário.
+**Existe:** inspeção de atlas originais no próprio LÖVE (F2), inventário verificável dos 67 PNGs originais, profundidade correta entre árvores/rochas e unidades; arte de unidades e edifícios sem deformação da proporção original dos recortes PNG; ordem de desenho por profundidade; prévia de construção e feedback visual temporário de deslocamento, ataque e destruição; pipeline para quadros de animação opcionais (ainda não recuperados do JAR). Motor em tick fixo de 30 Hz, navegação em grade sem atravessar paredes, formação de esquadrão, construção com checagem de colisões, saves legados compatíveis com parser restrito, testes de regressão; menu básico, cenário provisório, bases de dois lados, soldados e tanques, treino/construção, economia automática, navegação A*, inimigo simples, minimapa, mouse/teclado/toque, save/load e sprites extraídos fornecidos pelo usuário.
 
 **Ainda não é fiel ao original:** campanhas/missões, mapas e scripts autênticos, comportamento de IA, parâmetros exatos, evolução tecnológica, todos os tipos de unidades/edifícios, HUD e menus originais, animações e efeitos completos, áudio e sincronização de simulação. Não apresentar essas partes do protótipo como engenharia reversa concluída.
 
@@ -49,22 +49,34 @@ O protótipo recebe eventos de toque; ainda não foi empacotado nem validado com
 - `src/world.lua`: simulação provisória (a ser alinhada ao motor original);
 - `src/path.lua`: A* provisório;
 - `src/art.lua`, `src/animation.lua`: imagens, escala proporcional e pipeline visual não canônico;
+- `src/atlas_inspector.lua`: inspetor de PNGs originais exclusivo para engenharia reversa (F2);
 - `assets/animations/README.md`: formato para instalar quadros opcionais;
 - `src/ui.lua`: menus/HUD provisórios;
 - `src/save.lua`: persistência do protótipo;
 - `assets/original/`: imagens extraídas do pacote fornecido, preservadas;
 - `assets/sprites/`: recortes provisórios para esta versão;
 - `docs/ANALISE.md`: evidências, inventário e lacunas da extração;
+- `docs/ATLAS_GUIA.md`: como inspecionar os atlas sem fabricar frames;
+- `docs/ATLAS_INVENTARIO.csv`: dimensões, bytes e hashes dos 67 PNGs;
+- `tools/inventory_atlas.py`: geração e verificação do inventário sem dependências;
 - `docs/manifest_original.jad`: manifesto de referência;
 - `tools/inventory_jar.py`: inventário de JAR e recursos sem executá-lo;
 - `tests/smoke.lua`: verificação de telas/eventos com mock de LÖVE;
 - `tests/core_regression.lua`: regressões de navegação, economia, ordens e save;
 - `tests/visual_regression.lua`: proporção, temporização visual, efeitos e renderização em mock;
+- `tests/depth_regression.lua`: ordem de desenho árvores/unidades/rochas;
+- `tests/atlas_regression.lua`: seleção de PNGs originais, navegação, zoom e entrada;
 - `src/safe_table.lua`: leitura restrita de saves sem executar conteúdo.
 
 ## Regressões (sem LÖVE)
 
-No diretório do jogo com Lua 5.3: `lua tests/core_regression.lua`, `lua tests/visual_regression.lua` e `lua tests/smoke.lua`. Os testes também rodam por GitHub Actions a cada push. A aprovação desses testes não garante renderização correta, reprodução visual 1:1 nem execução em dispositivo real.
+No diretório do jogo com Lua 5.3: `lua tests/core_regression.lua`, `lua tests/visual_regression.lua`, `lua tests/depth_regression.lua`, `lua tests/atlas_regression.lua` e `lua tests/smoke.lua`. Execute `python3 tools/inventory_atlas.py --verify` para validar os PNGs originais. Os testes também rodam por GitHub Actions a cada push. A aprovação desses testes não garante renderização correta, reprodução visual 1:1 nem execução em dispositivo real.
+
+## Inspetor de recursos (v0.4)
+
+Pressione `F2` para inspecionar os atlas originais sem sair do jogo. Setas horizontais navegam por arquivos, PageUp/PageDown pulam dez, Home/End vão aos extremos, roda do mouse ajusta zoom e Esc fecha. A inspeção congela o protótipo enquanto está aberta. Esta é uma **ferramenta de desenvolvimento** e não faz parte da interface J2ME original. Os pixels originais não são modificados.
+
+A ordem visual dos obstáculos agora é calculada junto às entidades, de trás para frente, em vez de desenhar toda a vegetação antes das tropas. Isso melhora a consistência visual do protótipo, mas a ordem definitiva do original ainda depende da análise do JAR.
 
 ## Critério de conclusão
 

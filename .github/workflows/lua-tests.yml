@@ -15,5 +15,11 @@ jobs:
         run: lua5.3 tests/core_regression.lua
       - name: Test sprites and visual events (mock)
         run: lua5.3 tests/visual_regression.lua
+      - name: Test atlas inspection and depth rendering (mock)
+        run: |
+          lua5.3 tests/atlas_regression.lua
+          lua5.3 tests/depth_regression.lua
+      - name: Verify source atlas fingerprints
+        run: python3 tools/inventory_atlas.py --verify
       - name: Test UI and input lifecycle (mock)
         run: lua5.3 tests/smoke.lua

@@ -3,6 +3,7 @@ local Art=require('src.art')
 local UI=require('src.ui')
 local World=require('src.world')
 local Save=require('src.save')
+local Inspector=require('src.atlas_inspector')
 local screen='menu';local game=nil;local paused=false
 local scale,ox,oy=1,0,0
 local drag=nil;local gesture=nil
@@ -72,7 +73,7 @@ end
 function love.resize() updateScale() end
 function love.update(dt)
   if screen=='game' and game then
-    if not paused and not game.result then
+    if not paused and not game.result and not Inspector.active then
       local vx,vy=0,0
       if love.keyboard.isDown('left','a') then vx=vx-1 end
       if love.keyboard.isDown('right','d') then vx=vx+1 end
@@ -107,11 +108,13 @@ function love.draw()
     end
     UI.hud(game,paused)
   end
+  Inspector.draw()
   love.graphics.pop()
 end
 local function pointerDown(px,py,button,touch)
   local x,y=viewCoords(px,py)
   if x<0 or y<0 or x>=240 or y>=320 then return end
+  if Inspector.active then Inspector.mousepressed(x,y,button);return end
   local id,hit=UI.hit(x,y)
   if hit then act(id);return end
   if screen~='game' or paused or game.result then return end
@@ -138,6 +141,7 @@ end
 local function pointerMove(px,py)
   if not game or screen~='game' then return end
   local x,y=viewCoords(px,py)
+  if Inspector.active then Inspector.mousemoved(x,y);return end
   if game.buildMode and not paused then
     if x>=0 and x<240 and y>=26 and y<256 then
       local wx,wy=mapCoords(x,y)
@@ -160,6 +164,7 @@ local function pointerMove(px,py)
   end
 end
 local function pointerUp(px,py,button)
+  if Inspector.active then return end
   if not drag or not game then return end
   if drag.panning then drag=nil;return end
   local x,y=viewCoords(px,py)
@@ -193,6 +198,7 @@ function love.mousereleased(x,y,button)
   pointerUp(x,y,button)
 end
 function love.wheelmoved(x,y)
+  if Inspector.wheelmoved(y) then return end
   if screen=='game' and game and not paused then
     game.camera.y=game.camera.y-y*32;game.camera.x=game.camera.x-x*32
     cameraClamp()
@@ -210,6 +216,8 @@ function love.touchreleased(id,x,y)
   if gesture and gesture.id==id then pointerUp(x,y,1);gesture=nil end
 end
 function love.keypressed(key)
+  if Inspector.active then Inspector.keypressed(key);return end
+  if key=='f2' then Inspector.toggle();return end
   if key=='escape' then
     if screen=='help' then screen='menu'
     elseif screen=='game' and game then

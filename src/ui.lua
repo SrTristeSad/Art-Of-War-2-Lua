@@ -36,7 +36,7 @@ function UI.menu(game)
   UI.button('scenario','BATALHA LIVRE',30,168,180,27,false)
   UI.button('load','CONTINUAR',30,203,180,27,not love.filesystem.getInfo('save.lua'))
   UI.button('help','CONTROLES',30,238,180,27,false)
-  text('PROTOTIPO v0.3  |  J2ME 1.12.0',31,293,10,{.77,.83,.88})
+  text('PROTOTIPO v0.4  |  J2ME 1.12.0',31,293,10,{.77,.83,.88})
 end
 function UI.help()
   UI.newFrame()
@@ -57,7 +57,7 @@ function UI.help()
     'K: produzir tanque (fabrica).',
     'F5: salvar / F9: carregar.',
     'ESC: pausar / voltar ao menu.',
-    'Renda de creditos automatica.',
+    'F2: inspecionar PNGs originais.',
   }
   for i,s in ipairs(items) do text(s,11,46+(i-1)*15) end
   UI.button('menu','VOLTAR',53,283,134,27,false,true)

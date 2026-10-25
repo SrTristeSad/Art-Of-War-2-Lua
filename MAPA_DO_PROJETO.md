@@ -26,11 +26,11 @@ Quando não houver evidência suficiente, anotar explicitamente **provisório / 
 | 3. Motor determinístico | Atualização, grade, pathfinding, colisão, visão e interações iguais ao original | **Protótipo v0.2: tick fixo e regressões; paridade J2ME não validada** |
 | 4. RTS e progressão | Dinheiro, construção, produção, pesquisa, unidades, parâmetros, upgrades | **Protótipo parcial** |
 | 5. Inteligência artificial | Prioridades, alvos, ordens, defesa, agressividade e comportamento de missões | **Protótipo simples** |
-| 6. Interface 1:1 | Abertura, menus, HUD, comandos, seleção, telas, transições e fontes | **HUD provisório v0.3; tela 1:1 pendente** |
+| 6. Interface 1:1 | Abertura, menus, HUD, comandos, seleção, telas, transições e fontes | **HUD provisório; v0.4: inspetor técnico de atlas (não é HUD original)** |
 | 7. Conteúdo completo | Todos os mapas, missões, campanhas, eventos e condições de vitória | **Pendente** |
-| 8. Audiovisual | Animações, partículas, sprites corretos, efeitos sonoros e música | **Protótipo v0.3: PNG proporcional, camadas, eventos FX e pipeline de quadros opcionais; material original incompleto** |
+| 8. Audiovisual | Animações, partículas, sprites corretos, efeitos sonoros e música | **Protótipo v0.4: PNG proporcional, vegetação e unidades em ordem Y, FX, inventário dos 67 atlas; dados originais incompletos** |
 | 9. Windows e Android | Mesma lógica em ambas as plataformas; comandos e renderização adaptados | **Windows e Android não validados em dispositivo** |
-| 10. Paridade final | Testes comparativos, correção de divergências e regressão | **Regressões locais v0.3; comparações 1:1 pendentes** |
+| 10. Paridade final | Testes comparativos, correção de divergências e regressão | **Regressões locais v0.4; comparações 1:1 pendentes** |
 
 ## Matriz obrigatória de fidelidade
 
@@ -84,3 +84,12 @@ As correções abaixo são **engenharia de robustez**, não equivalência compro
 - Testes de proporção, quadros, efeitos, desenho, save e compatibilidade com saves anteriores.
 
 **Limite de fidelidade:** a composição do HUD, cadência visual e ordem de animações NÃO foram reconstruídas do bytecode J2ME. Ainda falta executar os novos visuais no LÖVE Windows/Android e verificar contra capturas do jogo real. A prioridade 1 continua sendo obter o JAR referente ao JAD.
+
+## Marco v0.4 — análise visual rastreável
+
+- `F2`: inspetor de PNGs **originais**, com navegação natural por numeração (`i0_2` antes de `i0_10`), zoom pixelado, consulta de coordenadas e pausa automática da simulação durante inspeção;
+- `tools/inventory_atlas.py` + `docs/ATLAS_INVENTARIO.csv`: dimensões, tamanho e SHA-256 dos **67 PNGs originais**, sem alterar qualquer recurso do pacote recebido;
+- Ordenação por profundidade compartilhada entre construções, unidades, árvores e rochas. Elementos à frente ocultam os de trás (correção da falha que fazia unidades aparecerem sobre árvores mesmo estando atrás);
+- Regressões próprias para visualização, zoom, navegação e ordenação da cena, adicionadas ao CI.
+
+**Importante:** inspetor, regra de profundidade e demais ferramentas v0.4 são melhorias técnicas demonstráveis, **não prova de paridade** com o programa J2ME. Mapas, HUD, frames, scripts, atributos e campanhas permanecem pendentes de extração do JAR.

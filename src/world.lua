@@ -415,26 +415,36 @@ function World:drawTerrain(camx,camy,viewH)
     local sx=(x-1)*SIZE-camx;local sy=(y-1)*SIZE-camy
     Art.draw(self.terrain[y][x],sx,sy,SIZE+0.2,SIZE+0.2)
   end end
-  for _,o in ipairs(self.obstacles) do
-    local x=o.x*SIZE-camx;local y=o.y*SIZE-camy
-    if x>-45 and y>-45 and x<270 and y<viewH+45 then
-      Art.draw(o.typeName,x-19,y-20,38,35)
-    end
-  end
 end
 function World:draw(camx,camy,viewH)
   love.graphics.stencil(function() love.graphics.rectangle("fill",0,26,240,viewH) end,"replace",1)
   love.graphics.setStencilTest("greater",0)
   love.graphics.push();love.graphics.translate(0,26)
   self:drawTerrain(camx,camy,viewH)
+  -- Objects with height (trees, rocks, buildings and troops) share one
+  -- ground-Y painter order. Previously obstacles were drawn under *every*
+  -- soldier, making troops visible through foreground vegetation.
   local drawable={}
-  for _,e in ipairs(self.entities) do if e.alive then drawable[#drawable+1]=e end end
-  -- Draw back-to-front so the soldier behind a tall building is occluded.
+  for i,o in ipairs(self.obstacles) do
+    drawable[#drawable+1]={y=o.y*SIZE,order=0,id=i,obstacle=o}
+  end
+  for _,e in ipairs(self.entities) do
+    if e.alive then drawable[#drawable+1]={y=e.y,order=1,id=e.id,entity=e} end
+  end
   table.sort(drawable,function(a,b)
-    if a.y==b.y then return a.id<b.id end
-    return a.y<b.y
+    if a.y~=b.y then return a.y<b.y end
+    if a.order~=b.order then return a.order<b.order end
+    return a.id<b.id
   end)
-  for _,e in ipairs(drawable) do
+  for _,object in ipairs(drawable) do
+    if object.obstacle then
+      local o=object.obstacle
+      local x,y=o.x*SIZE-camx,o.y*SIZE-camy
+      if x>-45 and y>-45 and x<270 and y<viewH+45 then
+        Art.draw(o.typeName,x-19,y-20,38,35)
+      end
+    else
+    local e=object.entity
     local sx,sy=e.x-camx,e.y-camy
     local size=STATS[e.kind].size
     if sx>-80 and sx<320 and sy>-80 and sy<viewH+80 then
@@ -467,6 +477,7 @@ function World:draw(camx,camy,viewH)
         love.graphics.setColor(1,1,1,1)
       end
     end
+    end -- entity object
   end
   for _,fx in ipairs(self.effects or {}) do
     local x,y=fx.x-camx,fx.y-camy
