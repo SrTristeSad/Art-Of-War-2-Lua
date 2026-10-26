@@ -35,6 +35,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'sequence_preview_regression.py'
           python3 -m unittest discover -s tests -p 'atlas_candidates_regression.py'
           python3 tools/detect_sprite_candidates.py --verify
+          python3 -m unittest discover -s tests -p 'review_gallery_regression.py'
           python3 tools/build_review_gallery.py
           python3 tools/build_review_gallery.py --verify
           python3 tools/verify_sprite_provenance.py
