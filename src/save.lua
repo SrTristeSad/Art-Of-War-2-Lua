@@ -1,4 +1,5 @@
 local SafeTable=require('src.safe_table')
+local Rules=require('src.mission_rules')
 local Save={}
 local SAVE_FORMAT=2
 local function encode(v,depth)
@@ -21,7 +22,8 @@ function Save.write(world)
   local copy={format=SAVE_FORMAT}
   for _,key in ipairs({'seed','mode','level','elapsed','money','income','entities',
     'nextId','obstacles','terrain','camera','result','incomeTime','aiTime',
-    'rngState','tickRemainder','w','h','tile','mapId'}) do
+    'rngState','tickRemainder','w','h','tile','mapId',
+    'missionObjective','missionEvents','missionEventDone'}) do
     copy[key]=world[key]
   end
   -- Do not serialize transient navigation caches or mutate live entities.
@@ -53,6 +55,16 @@ function Save.read(World)
   end
   if data.mapId~=nil and (type(data.mapId)~='string' or #data.mapId>60) then
     return nil,'Identificador de mapa invalido'
+  end
+  if data.missionObjective~=nil or data.missionEvents~=nil then
+    local valid,why=Rules.validate(data.missionObjective,data.missionEvents,data.w or 46,data.h or 38)
+    if not valid then return nil,'Regras de missao invalidas: '..tostring(why) end
+    if data.missionObjective==nil then return nil,'Objetivo de missao ausente' end
+    if type(data.missionEventDone)~='table' then return nil,'Estado dos eventos ausente' end
+    for k,v in pairs(data.missionEventDone) do
+      if type(k)~='number' or k%1~=0 or k<1 or k>#(data.missionEvents or {})
+        or v~=true then return nil,'Estado dos eventos invalido' end
+    end
   end
   local world=World.new(data.mode,data.level,data.seed)
   for k,v in pairs(data) do world[k]=v end

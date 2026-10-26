@@ -3,6 +3,7 @@ local Animation = require('src.animation')
 local Path = require('src.path')
 local Movement = require('src.movement')
 local Mission = require('src.mission')
+local MissionRules = require('src.mission_rules')
 local World = {}; World.__index=World
 local SIZE=16
 local STATS={
@@ -25,6 +26,7 @@ function World.new(mode,level,seed,missionData)
   self.terrain={};self.blocked={};self.obstacles={};self.queues={}
   self.tickRemainder=0;self.rngState=self.seed
   self.effects={};self.preview=nil
+  self.missionObjective=nil;self.missionEvents=nil;self.missionEventDone=nil
   if missionData then
     local ok,err=Mission.apply(self,missionData)
     if not ok then return nil,err end
@@ -489,7 +491,12 @@ function World:_tick(dt)
             enemy.hp=0;enemy.alive=false;self.selected[enemy.id]=nil
             self:effect('explosion',enemy.x,enemy.y,0.55)
             if enemy.building then self:refreshBlocked() end
-            if enemy.kind=='hq' then self.result=enemy.team==2 and 'VITORIA' or 'DERROTA' end
+            if enemy.kind=='hq' then
+              if enemy.team==1 then self.result='DERROTA'
+              elseif not self.missionObjective or self.missionObjective.kind=='destroy_hq' then
+                self.result='VITORIA'
+              end
+            end
           end
         end
         if not e.building and not enemy then
@@ -517,6 +524,7 @@ function World:_tick(dt)
       Animation.advance(e,dt,firedThisTick,Art.sequenceDuration(sprite,'attack'))
     end
   end
+  if self.missionObjective then MissionRules.tick(self) end
 end
 function World:drawTerrain(camx,camy,viewH)
   local left=math.max(1,math.floor(camx/SIZE))

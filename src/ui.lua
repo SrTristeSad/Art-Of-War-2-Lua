@@ -1,4 +1,5 @@
 local Art=require('src.art')
+local MissionRules=require('src.mission_rules')
 local UI={buttons={}}
 local lg=love.graphics
 local function text(t,x,y,size,color)
@@ -37,7 +38,7 @@ function UI.menu(game)
   UI.button('training_map','MAPA EXPERIMENTAL',30,192,180,25,false)
   UI.button('load','CONTINUAR',30,223,180,25,not love.filesystem.getInfo('save.lua'))
   UI.button('help','CONTROLES',30,254,180,25,false)
-  text('PROTOTIPO v0.17 | J2ME 1.12.0',31,293,10,{.77,.83,.88})
+  text('PROTOTIPO v0.18 | J2ME 1.12.0',31,293,10,{.77,.83,.88})
 end
 function UI.help()
   UI.newFrame()
@@ -74,6 +75,11 @@ function UI.hud(world,paused)
   lg.setColor(.03,.08,.12,1);lg.rectangle('fill',0,256,240,64)
   lg.setColor(.22,.56,.72,1);lg.rectangle('fill',0,256,240,1)
   UI.minimap(world,4,262,54,52)
+  local objectiveText=MissionRules.label(world)
+  if objectiveText and not world.result then
+    lg.setColor(.02,.09,.13,.80);lg.rectangle('fill',2,29,236,15)
+    text(objectiveText,6,32,9,{.94,.94,.74})
+  end
   lg.setColor(.3,.51,.65,1);lg.rectangle('line',3.5,261.5,55,53)
   local selected=world:selectedList()
   local first=#selected==1 and selected[1] or nil

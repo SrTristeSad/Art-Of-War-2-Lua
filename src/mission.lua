@@ -1,6 +1,7 @@
 -- V0.17 experimental mission format. Table literals are parsed, NOT executed.
 -- This module does not claim any format or mission from the original J2ME JAR.
 local SafeTable=require('src.safe_table')
+local MissionRules=require('src.mission_rules')
 local Mission={}
 local kinds={hq=true,barracks=true,factory=true,turret=true,infantry=true,tank=true}
 local scenery={rocks=true,forest=true}
@@ -78,6 +79,8 @@ function Mission.validate(m)
       return nil,'Economia inicial invalida'
     end
   end
+  local rulesOK,rulesErr=MissionRules.validate(m.objective,m.events,m.width,m.height)
+  if not rulesOK then return nil,rulesErr end
   return true
 end
 function Mission.decode(source)
@@ -111,6 +114,9 @@ function Mission.apply(world,descriptor)
   world.w,world.h=descriptor.width,descriptor.height
   world.terrain={};world.obstacles={};world.entities={};world.selected={};world.nextId=0
   world.mapId=descriptor.id
+  world.missionObjective=descriptor.objective or {kind='destroy_hq'}
+  world.missionEvents=descriptor.events or {}
+  world.missionEventDone={}
   world.money={[1]=descriptor.money[1],[2]=descriptor.money[2]}
   world.income={[1]=descriptor.income[1],[2]=descriptor.income[2]}
   for y=1,world.h do

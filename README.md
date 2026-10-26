@@ -257,3 +257,11 @@ para repetir os testes específicos desta etapa.
 **Vários esquadrões:** a escolha de área lateral verifica também as **reservas de estacionamento temporário** de outras tropas, impedindo que dois soldados reservem o mesmo espaço antes que qualquer um chegue lá. Foi corrigida a ordenação das opções de passagem (comparador estrito) quando há múltiplos candidatos. O mecanismo continua **provisório**: áreas sem passagem continuam fisicamente bloqueadas e ainda não existe algoritmo completo de fluxo para grandes exércitos.
 
 **Testes:** `tests/mission_loader_regression.lua` e `tests/squad_bay_reservation_regression.lua`; ambos adicionados ao GitHub Actions. A validação gráfica no LÖVE real, no Android e a equivalência com o JAR seguem **pendentes**.
+
+## Etapa v0.18 — objetivos e eventos de missão (experimentais)
+
+- `src/mission_rules.lua`: condições declarativas `destroy_hq`, `survive` e `eliminate_units`; ações temporais de crédito e reforços, executadas uma única vez. O QG do jogador continua sendo requisito para vencer.
+- `missions/training_crossroads.tbl`: cenário demonstrativo de sobrevivência por 90 segundos, com eventos aos 12, 22 e 45 segundos. A batalha livre e o restante do menu mantêm seus comportamentos anteriores.
+- O HUD apresenta o objetivo atual. Salvamentos preservam a definição e a execução dos eventos, sem executar texto proveniente de arquivos `.tbl` ou saves.
+- `tests/mission_objectives_regression.lua`: vitórias/derrotas, eventos executados uma única vez, segurança do parser, restauração, posições de reforços e integração ao relógio fixo da simulação.
+- Esta infraestrutura **não é reconstrução das missões originais**. Os gatilhos temporais são deliberadamente limitados, e não foi recuperado o JAR Java correspondente. A validação gráfica real no LÖVE continua pendente.

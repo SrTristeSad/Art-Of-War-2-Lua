@@ -238,3 +238,15 @@ fidelidade 1:1 nem afirma conhecer a lógica da IA original.
 - **Pendente:** sistema de múltiplas filas de esquadrões sob alta densidade, detecção e resolução de deadlocks sem área lateral, mapas reais, scripts de campanha, objetivos e gatilhos do JAR e paridade de colisão. **Nenhum cenário novo ou regra de tráfego desta etapa foi comprovado contra o original.**
 
 Detalhes do formato provisório: [docs/MAPAS_EXPERIMENTAIS.md](docs/MAPAS_EXPERIMENTAIS.md).
+
+## v0.18 — objetivos e eventos declarativos (protótipo)
+
+- [x] Motor `src/mission_rules.lua` com três tipos de objetivos configuráveis e eventos temporais de crédito/reforço com ação única.
+- [x] Mapa `training_crossroads`: sobreviver 90 segundos e eventos aos 12/22/45 segundos; desenhado para o protótipo, **não** canônico.
+- [x] HUD mostra progresso de sobrevivência, e salva/restaura os objetivos e os eventos já executados.
+- [x] Validação de limites, tipos, posição de reforços e rejeição de textos executáveis.
+- [x] Nova regressão `tests/mission_objectives_regression.lua`, integrada ao GitHub Actions.
+- [ ] Validar estes sistemas visualmente no LÖVE em Windows e Android.
+- [ ] Recuperar JAR/APK e reconstruir os dados de missões/condições/vitória autênticos.
+
+**Estado:** motor experimental de missão, sem prova de equivalência 1:1.
