@@ -23,7 +23,8 @@ function Save.write(world)
   for _,key in ipairs({'seed','mode','level','elapsed','money','income','entities',
     'nextId','obstacles','terrain','camera','result','incomeTime','aiTime',
     'rngState','tickRemainder','w','h','tile','mapId',
-    'missionObjective','missionEvents','missionEventDone'}) do
+    'missionObjective','missionEvents','missionEventDone',
+    'missionStage','missionStageSince'}) do
     copy[key]=world[key]
   end
   -- Do not serialize transient navigation caches or mutate live entities.
@@ -64,6 +65,19 @@ function Save.read(World)
     for k,v in pairs(data.missionEventDone) do
       if type(k)~='number' or k%1~=0 or k<1 or k>#(data.missionEvents or {})
         or v~=true then return nil,'Estado dos eventos invalido' end
+    end
+    if data.missionObjective.kind=='sequence' then
+      local count=#data.missionObjective.steps
+      if type(data.elapsed)~='number' or data.elapsed~=data.elapsed
+        or data.elapsed<0 or data.elapsed>86400
+        or type(data.missionStage)~='number' or data.missionStage%1~=0
+        or data.missionStage<1 or data.missionStage>count+1
+        or type(data.missionStageSince)~='number' or data.missionStageSince<0
+        or data.missionStageSince>(data.elapsed or -1)+1e-7 then
+        return nil,'Estado das etapas invalido'
+      end
+    elseif data.missionStage~=nil or data.missionStageSince~=nil then
+      return nil,'Save antigo contem etapas inesperadas'
     end
   end
   local world=World.new(data.mode,data.level,data.seed)

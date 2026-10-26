@@ -36,9 +36,9 @@ local function cameraClamp()
 end
 local function start(mode,level)
   local map
-  if mode=='scenario' and level==2 then
+  if mode=='scenario' and (level==2 or level==3) then
     local err
-    map,err=Mission.load('training_crossroads')
+    map,err=Mission.load(level==3 and 'training_operations' or 'training_crossroads')
     if not map then print('Erro ao carregar mapa experimental: '..tostring(err));return end
   end
   local newGame,err=World.new(mode,level or 1,nil,map)
@@ -57,6 +57,7 @@ local function act(id)
   elseif id=='campaign' then start('campaign',1)
   elseif id=='scenario' then start('scenario',1)
   elseif id=='training_map' then start('scenario',2)
+  elseif id=='operations_map' then start('scenario',3)
   elseif id=='help' then screen='help'
   elseif id=='load' then
     local loaded,err=Save.read(World)

@@ -2,7 +2,7 @@
 
 > **OBJETIVO PRINCIPAL: reconstruir o jogo original com fidelidade 1:1**, substituindo o motor Java ME pelo **Lua + LÖVE**, sem transformar a experiência em outro jogo.
 >
-> **ESTADO ATUAL: protótipo técnico v0.15, NÃO É 1:1.** Os sistemas provisórios são ferramentas de desenvolvimento e serão substituídos à medida que o comportamento original for verificado.
+> **ESTADO ATUAL: protótipo técnico v0.19, NÃO É 1:1.** Os sistemas provisórios são ferramentas de desenvolvimento e serão substituídos à medida que o comportamento original for verificado.
 
 ## Princípio do projeto (não negociável)
 
@@ -265,3 +265,14 @@ para repetir os testes específicos desta etapa.
 - O HUD apresenta o objetivo atual. Salvamentos preservam a definição e a execução dos eventos, sem executar texto proveniente de arquivos `.tbl` ou saves.
 - `tests/mission_objectives_regression.lua`: vitórias/derrotas, eventos executados uma única vez, segurança do parser, restauração, posições de reforços e integração ao relógio fixo da simulação.
 - Esta infraestrutura **não é reconstrução das missões originais**. Os gatilhos temporais são deliberadamente limitados, e não foi recuperado o JAR Java correspondente. A validação gráfica real no LÖVE continua pendente.
+
+
+## Etapa v0.19 — objetivos encadeados e eventos por acontecimentos
+
+- Novo cenário **MAPA: OPERACAO** (`missions/training_operations.tbl`) com três etapas: proteger o quartel aliado por 20 segundos, destruir o quartel inimigo identificado no mapa e resistir por outros 25 segundos.
+- `objective={kind="sequence",steps={...}}` implementa tempo relativo ao início de cada etapa, alvos identificados por facção/tipo/coordenada e vitória só após a última etapa. Se a estrutura protegida cair durante sua etapa, ocorre derrota. O QG do jogador permanece obrigatório.
+- Os eventos continuam aceitando `at` (segundos globais), mas também podem usar `trigger={kind="stage_start",step=2}` ou `trigger={kind="structure_destroyed",team=2,structure="barracks",x=31,y=13}`. Exatamente um gatilho por evento. Recompensas e reforços são executados **uma vez só**.
+- O menu possui as duas demonstrações separadas: sobrevivência v0.18 e operação v0.19. Os saves registram etapa e instante de início, validam o estado restaurado e continuam aceitando saves legados sem missões encadeadas.
+- `tests/mission_stages_regression.lua` verifica progressão, derrota por perda de estrutura protegida, gatilhos, impossibilidade de recompensas duplicadas, continuação de saves e rejeição de arquivos malformados. Integrado ao CI.
+
+**Limites da engenharia reversa:** este segundo mapa reutiliza terreno experimental, sem equivalência confirmada com nenhuma missão do Art of War 2 J2ME. Captura de estruturas e scripts autênticos da campanha não foram implementados; continuam dependentes de evidências do executável original.

@@ -250,3 +250,16 @@ Detalhes do formato provisório: [docs/MAPAS_EXPERIMENTAIS.md](docs/MAPAS_EXPERI
 - [ ] Recuperar JAR/APK e reconstruir os dados de missões/condições/vitória autênticos.
 
 **Estado:** motor experimental de missão, sem prova de equivalência 1:1.
+
+
+## v0.19 — cadeia de objetivos e gatilhos declarativos (não canônicos)
+
+- [x] Validar até 8 etapas seguras de missão: `survive`, `protect_structure` e `destroy_structure`.
+- [x] Identificar alvos de estrutura por time, tipo e coordenadas do mapa; rejeitar referências inexistentes na missão importada.
+- [x] Eventos por tempo global, início de etapa e destruição de estrutura; cada evento com apenas um gatilho, sem execução arbitrária de script.
+- [x] Persistir etapa atual, instante inicial da etapa e eventos concluídos. Rejeitar saves com cursores ou cronômetros inválidos, mantendo compatibilidade com saves anteriores.
+- [x] Segundo mapa **experimental** com sequência proteger/destruir/resistir, menu próprio e testes em CI.
+- [ ] Reconstruir os dados efetivos de campanha, objetivos, gatilhos e IA do JAR Java; comparar tela a tela no emulador.
+- [ ] Testar a renderização no LÖVE do Windows e os controles no Android.
+
+**Fidelidade 1:1 continua pendente.** As regras desta etapa não são atribuídas ao jogo original.

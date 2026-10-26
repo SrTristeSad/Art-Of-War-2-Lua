@@ -79,7 +79,7 @@ function Mission.validate(m)
       return nil,'Economia inicial invalida'
     end
   end
-  local rulesOK,rulesErr=MissionRules.validate(m.objective,m.events,m.width,m.height)
+  local rulesOK,rulesErr=MissionRules.validate(m.objective,m.events,m.width,m.height,m.entities)
   if not rulesOK then return nil,rulesErr end
   return true
 end
@@ -91,7 +91,8 @@ function Mission.decode(source)
   return descriptor
 end
 -- Only IDs in this allowlist may be read. No arbitrary filesystem paths.
-local builtin={training_crossroads='missions/training_crossroads.tbl'}
+local builtin={training_crossroads='missions/training_crossroads.tbl',
+  training_operations='missions/training_operations.tbl'}
 function Mission.load(id)
   local filename=builtin[id]
   if not filename then return nil,'Missao desconhecida' end
@@ -117,6 +118,8 @@ function Mission.apply(world,descriptor)
   world.missionObjective=descriptor.objective or {kind='destroy_hq'}
   world.missionEvents=descriptor.events or {}
   world.missionEventDone={}
+  world.missionStage=world.missionObjective.kind=='sequence' and 1 or nil
+  world.missionStageSince=world.missionStage and world.elapsed or nil
   world.money={[1]=descriptor.money[1],[2]=descriptor.money[2]}
   world.income={[1]=descriptor.income[1],[2]=descriptor.income[2]}
   for y=1,world.h do

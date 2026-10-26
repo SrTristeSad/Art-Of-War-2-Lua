@@ -1,4 +1,4 @@
-# Formato experimental de mapas e missões — v0.18
+# Formato experimental de mapas e missões — v0.19
 
 > **Não é o formato do Art of War 2 original.** O pacote parcial fornecido não contém um JAR completo com as missões. Este formato é uma infraestrutura **provisória**, destinada a permitir importação e comparação futuros, sem declarar qualquer mapa como canônico.
 
@@ -36,3 +36,25 @@ Execute `lua5.3 tests/mission_objectives_regression.lua`, `lua5.3 tests/mission_
 2. Localizar no executável os dados originais de mapas, terrenos, posicionamento de unidades, condições de vitória e gatilhos.
 3. Implementar decodificadores de conteúdo **separados** dos mapas experimentais.
 4. Comparar cada fase carregada pixel a pixel e comportamento a comportamento em emulador antes de marcá-la como verificada.
+
+
+## Extensão v0.19: etapas e acontecimentos
+
+O segundo botão de mapa (**MAPA: OPERACAO**) carrega `training_operations`. Reutiliza um terreno experimental de 36 × 26 células, mas possui três etapas distintas:
+
+1. Proteger o **quartel aliado**, time 1, célula `(5,13)`, durante 20 segundos.
+2. Destruir o **quartel inimigo**, time 2, célula `(31,13)`.
+3. Sobreviver por mais 25 segundos **a partir da abertura da terceira etapa**.
+
+O formato admite `objective={kind="sequence",steps={...}}`, com no máximo oito etapas. Tipos de etapa: `{kind="survive",seconds=25}`, `{kind="protect_structure",team=1,structure="barracks",x=5,y=13,seconds=20}` e `{kind="destroy_structure",team=2,structure="barracks",x=31,y=13}`. Estruturas protegidas/destruídas devem estar presentes **na lista inicial de edifícios**; o verificador não aceita referências inventadas. `protect_structure` falha se seu alvo morrer durante a etapa; a última etapa concluída vence. O QG aliado destruído causa derrota em qualquer momento.
+
+Eventos podem continuar usando `at=<tempo-global>` ou usar **um único** `trigger`, escolhido dentre:
+
+- `{kind="stage_start",step=2}` — dispara quando a segunda etapa abre;
+- `{kind="structure_destroyed",team=2,structure="barracks",x=31,y=13}` — dispara quando aquele edifício específico é destruído.
+
+As únicas ações são `credits` e `reinforce`, com as restrições anteriores. Eventos são executados uma única vez, mesmo após salvar/carregar. Se um reforço não couber fisicamente no local, o evento é consumido, não repetido. Só IDs permitidos pela tabela do carregador são lidos; não há scripts customizados.
+
+**Não canônico:** a identificação de etapas, os tempos, coordenadas e gatilhos são decisões técnicas do protótipo, não conhecimento recuperado do JAR original. Nenhum objetivo de captura foi implementado nesta versão.
+
+Teste: `lua5.3 tests/mission_stages_regression.lua` (ou `luatex --luaonly tests/mission_stages_regression.lua`).

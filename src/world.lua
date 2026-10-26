@@ -27,6 +27,7 @@ function World.new(mode,level,seed,missionData)
   self.tickRemainder=0;self.rngState=self.seed
   self.effects={};self.preview=nil
   self.missionObjective=nil;self.missionEvents=nil;self.missionEventDone=nil
+  self.missionStage=nil;self.missionStageSince=nil
   if missionData then
     local ok,err=Mission.apply(self,missionData)
     if not ok then return nil,err end
