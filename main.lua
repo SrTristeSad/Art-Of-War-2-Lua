@@ -139,9 +139,9 @@ local function pointerDown(px,py,button,touch)
   drag={x=x,y=y,currentX=x,currentY=y,worldX=wx,worldY=wy,selecting=false,touch=touch}
 end
 local function pointerMove(px,py)
-  if not game or screen~='game' then return end
   local x,y=viewCoords(px,py)
   if Inspector.active then Inspector.mousemoved(x,y);return end
+  if not game or screen~='game' then return end
   if game.buildMode and not paused then
     if x>=0 and x<240 and y>=26 and y<256 then
       local wx,wy=mapCoords(x,y)
@@ -164,7 +164,11 @@ local function pointerMove(px,py)
   end
 end
 local function pointerUp(px,py,button)
-  if Inspector.active then return end
+  if Inspector.active then
+    local x,y=viewCoords(px,py)
+    Inspector.mousereleased(x,y,button)
+    return
+  end
   if not drag or not game then return end
   if drag.panning then drag=nil;return end
   local x,y=viewCoords(px,py)

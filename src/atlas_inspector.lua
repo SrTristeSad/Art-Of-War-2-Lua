@@ -1,6 +1,7 @@
 -- Ferramenta de engenharia reversa (F2). Nao integra a interface original.
 -- Mostra os PNGs brutos sem modificar os atlas ou criar frames ficticios.
-local Inspector={active=false,index=1,zoom=1,files={},cache={},mouseX=nil,mouseY=nil,dragging=nil}
+local Regions=require('src.atlas_regions')
+local Inspector={active=false,index=1,zoom=1,files={},cache={},mouseX=nil,mouseY=nil,dragging=nil,selection=nil,message=nil}
 local DIR='assets/original/'
 local AREA={x=10,y=43,w=220,h=222}
 local function normalizedFilename(a)
@@ -16,6 +17,7 @@ local function order(a,b)
 end
 function Inspector.initialize()
   Inspector.files={};Inspector.cache={};Inspector.index=1;Inspector.zoom=1
+  Inspector.selection=nil;Inspector.message=nil;Inspector.dragging=nil
   local fs=love.filesystem
   local entries=(fs and fs.getDirectoryItems and fs.getDirectoryItems(DIR)) or {}
   for _,entry in ipairs(entries) do
@@ -44,10 +46,53 @@ end
 function Inspector.step(shift)
   if #Inspector.files==0 then return end
   Inspector.index=((Inspector.index-1+shift)%#Inspector.files)+1
-  Inspector.zoom=1;Inspector.dragging=nil
+  Inspector.zoom=1;Inspector.dragging=nil;Inspector.selection=nil;Inspector.message=nil
 end
 function Inspector.changeZoom(delta)
   Inspector.zoom=math.max(0.5,math.min(8,Inspector.zoom*(delta>0 and 1.25 or .8)))
+end
+-- Keep the crop in source-image pixel coordinates; zoom must not affect it.
+local function imagePlacement()
+  local image=currentImage()
+  if not image then return nil end
+  local iw,ih=image:getDimensions()
+  if iw<=0 or ih<=0 then return nil end
+  local fit=math.min(AREA.w/iw,AREA.h/ih)
+  local scale=fit*Inspector.zoom
+  return AREA.x+(AREA.w-iw*scale)/2,AREA.y+(AREA.h-ih*scale)/2,scale,iw,ih
+end
+local function sourcePixel(x,y,clamp)
+  local ix,iy,scale,iw,ih=imagePlacement()
+  if not ix or not clamp and (x<AREA.x or x>=AREA.x+AREA.w or y<AREA.y or y>=AREA.y+AREA.h) then return nil end
+  return Regions.imagePoint(x,y,ix,iy,scale,iw,ih,clamp)
+end
+function Inspector.saveSelection()
+  local r=Inspector.selection
+  local _,_,_,iw,ih=imagePlacement()
+  local row,err=Regions.csvRow(Inspector.selectedFile(),r,iw or 0,ih or 0)
+  if not row then Inspector.message=err;return false end
+  local fs=love.filesystem
+  local path='atlas_regions.csv'
+  local exists=fs.getInfo(path,'file')
+  local previous=exists and fs.read(path) or nil
+  if exists and previous==nil then
+    Inspector.message='Falha ao ler CSV existente';return false
+  end
+  if not exists then previous=Regions.HEADER end
+  -- Do not create a malformed second header or truncate pre-existing data on read errors.
+  if previous:sub(1,#Regions.HEADER)~=Regions.HEADER then
+    Inspector.message='CSV existente invalido';return false
+  end
+  local ok,writeErr=fs.write(path,previous..row)
+  Inspector.message=ok and ('Regiao registrada em '..path) or tostring(writeErr or 'Erro ao salvar')
+  return not not ok
+end
+function Inspector.mousereleased(x,y,button)
+  if not Inspector.active or button~=1 or not Inspector.dragging then return false end
+  local px,py=sourcePixel(x,y,true)
+  if px then Inspector.selection=Regions.rectangle(Inspector.dragging.x,Inspector.dragging.y,px,py) end
+  Inspector.dragging=nil
+  return true
 end
 function Inspector.keypressed(key)
   if key=='escape' or key=='f2' then Inspector.close();return true end
@@ -55,8 +100,10 @@ function Inspector.keypressed(key)
   elseif key=='left' or key=='a' then Inspector.step(-1)
   elseif key=='pageup' then Inspector.step(-10)
   elseif key=='pagedown' then Inspector.step(10)
-  elseif key=='home' then Inspector.index=1;Inspector.zoom=1
-  elseif key=='end' then Inspector.index=math.max(1,#Inspector.files);Inspector.zoom=1
+  elseif key=='home' then Inspector.index=1;Inspector.zoom=1;Inspector.selection=nil;Inspector.dragging=nil
+  elseif key=='end' then Inspector.index=math.max(1,#Inspector.files);Inspector.zoom=1;Inspector.selection=nil;Inspector.dragging=nil
+  elseif key=='s' then Inspector.saveSelection()
+  elseif key=='c' then Inspector.selection=nil;Inspector.dragging=nil;Inspector.message=nil
   elseif key=='+' or key=='=' or key=='kp+' then Inspector.changeZoom(1)
   elseif key=='-' or key=='kp-' then Inspector.changeZoom(-1)
   else return false end
@@ -71,12 +118,22 @@ function Inspector.mousepressed(x,y,button)
       else Inspector.zoom=1 end
     elseif x>=AREA.x and x<AREA.x+AREA.w and y>=AREA.y and y<AREA.y+AREA.h then
       Inspector.mouseX,Inspector.mouseY=x,y
+      local px,py=sourcePixel(x,y,false)
+      if px then
+        Inspector.dragging={x=px,y=py}
+        Inspector.selection=Regions.rectangle(px,py,px,py)
+        Inspector.message=nil
+      end
     end
   elseif button==2 then Inspector.close() end
   return true
 end
 function Inspector.mousemoved(x,y)
   Inspector.mouseX,Inspector.mouseY=x,y
+  if Inspector.dragging then
+    local px,py=sourcePixel(x,y,true)
+    if px then Inspector.selection=Regions.rectangle(Inspector.dragging.x,Inspector.dragging.y,px,py) end
+  end
 end
 function Inspector.wheelmoved(y)
   if not Inspector.active then return false end
@@ -106,24 +163,27 @@ function Inspector.draw()
     end
   end
   if image then
-    local iw,ih=image:getDimensions()
-    local fit=math.min(AREA.w/iw,AREA.h/ih)
-    local scale=fit*Inspector.zoom
-    local x=AREA.x+(AREA.w-iw*scale)/2
-    local y=AREA.y+(AREA.h-ih*scale)/2
+    local x,y,scale,iw,ih=imagePlacement()
     -- Native atlas size and aspect ratio are retained. Oversized views are clipped.
     g.stencil(function() g.rectangle('fill',AREA.x,AREA.y,AREA.w,AREA.h) end,'replace',1)
     g.setStencilTest('greater',0)
     g.setColor(1,1,1,1);g.draw(image,x,y,0,scale,scale)
+    if Inspector.selection then
+      local r=Inspector.selection
+      g.setColor(.1,.9,.98,.20)
+      g.rectangle('fill',x+r.x*scale,y+r.y*scale,r.w*scale,r.h*scale)
+      g.setColor(.2,1,1,1)
+      g.rectangle('line',x+r.x*scale,y+r.y*scale,r.w*scale,r.h*scale)
+    end
     g.setStencilTest()
     local mx,my=Inspector.mouseX,Inspector.mouseY
     if mx and mx>=AREA.x and mx<AREA.x+AREA.w and my>=AREA.y and my<AREA.y+AREA.h then
-      local px,py=math.floor((mx-x)/scale),math.floor((my-y)/scale)
-      if px>=0 and py>=0 and px<iw and py<ih then
+      local px,py=sourcePixel(mx,my,false)
+      if px then
         Inspector.pixelX,Inspector.pixelY=px,py
       else Inspector.pixelX=nil;Inspector.pixelY=nil end
     else Inspector.pixelX=nil;Inspector.pixelY=nil end
-    write(string.format('%d x %d px  zoom %.2fx',iw,ih,Inspector.zoom),10,266)
+    if not Inspector.message then write(string.format('%d x %d px  zoom %.2fx',iw,ih,Inspector.zoom),10,266) end
   else
     Inspector.pixelX=nil;Inspector.pixelY=nil
     write('Nenhum PNG original encontrado.',15,147)
@@ -132,8 +192,11 @@ function Inspector.draw()
   g.setColor(.10,.24,.36,1);g.rectangle('fill',8,279,68,21)
   g.rectangle('fill',86,279,68,21);g.rectangle('fill',164,279,68,21)
   write('< ANT',21,285);write('ZOOM 1x',96,285);write('PROX >',174,285)
-  write(Inspector.pixelX and ('Pixel: '..Inspector.pixelX..', '..Inspector.pixelY)
-     or 'Setas: PNG  |  roda: zoom',8,304)
+  local r=Inspector.selection
+  local info=r and string.format('%d,%d  %dx%d  S:salvar C:limpar',r.x,r.y,r.w,r.h)
+    or (Inspector.pixelX and ('Pixel: '..Inspector.pixelX..', '..Inspector.pixelY) or 'Setas: PNG  |  roda: zoom')
+  write(info,8,304)
+  if Inspector.message then write(Inspector.message:sub(1,39),8,267) end
   g.setColor(1,1,1,1)
 end
 return Inspector

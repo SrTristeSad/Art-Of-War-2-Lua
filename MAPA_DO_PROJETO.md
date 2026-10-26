@@ -26,11 +26,11 @@ Quando não houver evidência suficiente, anotar explicitamente **provisório / 
 | 3. Motor determinístico | Atualização, grade, pathfinding, colisão, visão e interações iguais ao original | **Protótipo v0.2: tick fixo e regressões; paridade J2ME não validada** |
 | 4. RTS e progressão | Dinheiro, construção, produção, pesquisa, unidades, parâmetros, upgrades | **Protótipo parcial** |
 | 5. Inteligência artificial | Prioridades, alvos, ordens, defesa, agressividade e comportamento de missões | **Protótipo simples** |
-| 6. Interface 1:1 | Abertura, menus, HUD, comandos, seleção, telas, transições e fontes | **HUD provisório; v0.4: inspetor técnico de atlas (não é HUD original)** |
+| 6. Interface 1:1 | Abertura, menus, HUD, comandos, seleção, telas, transições e fontes | **HUD provisório; v0.5: seleção de atlas com CSV (ferramenta não original)** |
 | 7. Conteúdo completo | Todos os mapas, missões, campanhas, eventos e condições de vitória | **Pendente** |
-| 8. Audiovisual | Animações, partículas, sprites corretos, efeitos sonoros e música | **Protótipo v0.4: PNG proporcional, vegetação e unidades em ordem Y, FX, inventário dos 67 atlas; dados originais incompletos** |
+| 8. Audiovisual | Animações, partículas, sprites corretos, efeitos sonoros e música | **Protótipo v0.4: PNG proporcional, vegetação e unidades em ordem Y, FX, inventário dos 67 atlas; recortes v0.5 sem verificação de identidade; dados originais incompletos** |
 | 9. Windows e Android | Mesma lógica em ambas as plataformas; comandos e renderização adaptados | **Windows e Android não validados em dispositivo** |
-| 10. Paridade final | Testes comparativos, correção de divergências e regressão | **Regressões locais v0.4; comparações 1:1 pendentes** |
+| 10. Paridade final | Testes comparativos, correção de divergências e regressão | **Regressões locais v0.5; comparações 1:1 pendentes** |
 
 ## Matriz obrigatória de fidelidade
 
@@ -93,3 +93,12 @@ As correções abaixo são **engenharia de robustez**, não equivalência compro
 - Regressões próprias para visualização, zoom, navegação e ordenação da cena, adicionadas ao CI.
 
 **Importante:** inspetor, regra de profundidade e demais ferramentas v0.4 são melhorias técnicas demonstráveis, **não prova de paridade** com o programa J2ME. Mapas, HUD, frames, scripts, atributos e campanhas permanecem pendentes de extração do JAR.
+
+## Marco v0.5 — registro de regiões de atlas sem inventar identificação
+
+- A partir do inspetor `F2`, clique e arraste sobre um PNG original para marcar uma região em coordenadas inteiras do próprio arquivo; `C` limpa; `S` anexa entrada a `atlas_regions.csv` no diretório de save do LÖVE.
+- `src/atlas_regions.lua` valida limites, dimensões, origem em zero e serializa CSV marcando explicitamente `unverified`. Alterar zoom não altera coordenadas já marcadas.
+- `tools/export_atlas_regions.py` exporta PNGs derivados pixel-exatos dos recortes com verificação de limites e sem sobrescrita; não edita os 67 PNGs originais nem insere sprites presumidos na renderização do jogo.
+- Corrigido o roteamento de movimento e soltura do mouse quando o inspetor é aberto no menu (sem mundo inicializado). Testes Lua e Python para regressões de seleção, CSV, coordenadas, recortes, path traversal e duplicatas.
+
+**Limites:** esses recortes não são identificações verificadas de frames/sprites. Para alcançar 1:1, ainda é necessário comparar os atlas à execução/bytecode original. O fluxo de exportação depende de Pillow; validação visual no runtime LÖVE e plataformas reais continua pendente.

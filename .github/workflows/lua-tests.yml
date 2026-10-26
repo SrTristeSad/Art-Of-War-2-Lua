@@ -18,7 +18,12 @@ jobs:
       - name: Test atlas inspection and depth rendering (mock)
         run: |
           lua5.3 tests/atlas_regression.lua
+          lua5.3 tests/regions_regression.lua
           lua5.3 tests/depth_regression.lua
+      - name: Install Pillow for atlas export tests
+        run: python3 -m pip install pillow
+      - name: Verify atlas crop export
+        run: python3 -m unittest discover -s tests -p export_atlas_regression.py
       - name: Verify source atlas fingerprints
         run: python3 tools/inventory_atlas.py --verify
       - name: Test UI and input lifecycle (mock)
