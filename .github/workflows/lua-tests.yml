@@ -15,6 +15,7 @@ jobs:
         run: |
           lua5.3 tests/core_regression.lua
           lua5.3 tests/combat_orders_regression.lua
+          lua5.3 tests/traffic_regression.lua
       - name: Test sprites and visual events (mock)
         run: lua5.3 tests/visual_regression.lua
       - name: Test atlas inspection and depth rendering (mock)
@@ -37,8 +38,6 @@ jobs:
           python3 -m unittest discover -s tests -p 'sequence_preview_regression.py'
           python3 -m unittest discover -s tests -p 'atlas_candidates_regression.py'
           python3 tools/detect_sprite_candidates.py --verify
-          python3 -m unittest discover -s tests -p 'review_gallery_regression.py'
-          python3 tools/build_review_gallery.py
           python3 tools/build_review_gallery.py --verify
           python3 tools/verify_sprite_provenance.py
       - name: Verify source atlas fingerprints

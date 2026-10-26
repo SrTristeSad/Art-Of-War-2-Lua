@@ -167,10 +167,10 @@ certifica comportamento do jogo original.
 
 ### Etapa v0.11 — comparacao visual controlada
 
-- **Concluido (ferramenta):** fixar regiao de referencia com `H` e comparar com a selecao atual, inclusive entre atlas; `L` para liberar. Nao altera estado do motor.
-- **Concluido (inventario):** gerador deterministico de seis pranchas para as 72 regioes prioritarias com indice; 106 regioes de baixa prioridade mantidas.
-- **Concluido (qualidade):** testes Lua e Python, inventario SHA-256 dos 67 atlas e regressao do jogo.
-- **Ainda nao feito:** certificacao de ordem/direcao/tempo dos quadros, reproducao 1:1 do HUD e das missoes, teste grafico no LÖVE/Android. Dependencia principal: JAR completo original.
+- **Concluido (ferramenta):** fixar regiao de referencia com `H` e comparar com a selecao atual (inclusive entre atlas), `L` para liberar. Sem mutacoes de sprites ou de estado do motor.
+- **Concluido (inventario):** seis pranchas deterministicas para as 72 regioes prioritarias, com indice de coordenadas; 106 regioes de baixa prioridade mantidas.
+- **Concluido (qualidade):** testes de comparacao de regioes, indices da galeria, pixels fonte intactos e regressao do jogo.
+- **Ainda nao feito:** certificacao da ordem/direcao/temporizacao dos quadros de animacao, reproducao 1:1 do HUD e das missoes, validacao grafica no LÖVE real/Android. Dependencia principal: JAR completo do jogo original.
 
 
 ## Etapa v0.12 — ordens de combate e estabilidade do núcleo
@@ -182,3 +182,21 @@ certifica comportamento do jogo original.
 - Esses comportamentos melhoram a **consistência do protótipo Lua**, mas ainda não foram certificados contra o executável Java original. Não implicam equivalência 1:1 de IA ou combate.
 
 Teste adicional: `lua5.3 tests/combat_orders_regression.lua` (ou `texlua` onde não houver Lua 5.3).
+
+
+## Etapa v0.13 — colisão e trânsito de tropas (protótipo)
+
+- **Concluído:** verificação circular da área ocupada por soldados e tanques
+  e colisão contra células sólidas retangulares.
+- **Concluído:** desvio local determinístico e recálculo temporário de rota
+  quando o tráfego faz a unidade tentar contornar continuamente outra tropa.
+- **Concluído:** atribuição de posições em esquadrão evita células ocupadas
+  por unidades externas ao grupo, quando existirem alternativas.
+- **Concluído:** relógios de congestionamento são transitórios; testes
+  automáticos cobrem bloqueio, encontros e compatibilidade dos saves.
+- **Pendente:** comparar a física, a formação e as regras de colisão com o
+  JAR J2ME; validar no runtime LÖVE no Windows e no Android; ajustar casos
+  extremos de aglomeração, pontes/corredores e mapas de campanha reais.
+
+**Status 1:1:** não atingido. Raios, velocidades e lógica de desvio ainda
+são escolhas provisórias da reconstrução.

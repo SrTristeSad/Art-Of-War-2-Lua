@@ -1,6 +1,7 @@
 local Art = require('src.art')
 local Animation = require('src.animation')
 local Path = require('src.path')
+local Movement = require('src.movement')
 local World = {}; World.__index=World
 local SIZE=16
 local STATS={
@@ -150,7 +151,18 @@ function World:moveSelected(x,y)
           local gx,gy=cx+dx,cy+dy
           if gx>=1 and gy>=1 and gx<=self.w and gy<=self.h
              and not self.blocked[gy*self.w+gx] then
-            destinations[#destinations+1]={x=gx*SIZE,y=gy*SIZE}
+            -- Avoid destinations already occupied by unselected troops.
+            -- Selected units may swap positions while the formation rearranges.
+            local free=true
+            for _,other in ipairs(self.entities) do
+              if other.alive and not other.building and not self.selected[other.id] then
+                local r=Movement.radius(other)+7.3
+                if (gx*SIZE-other.x)^2+(gy*SIZE-other.y)^2<r*r then
+                  free=false;break
+                end
+              end
+            end
+            if free then destinations[#destinations+1]={x=gx*SIZE,y=gy*SIZE} end
           end
         end
       end end
@@ -168,7 +180,7 @@ function World:moveSelected(x,y)
       local spot=table.remove(destinations,closest)
       goal.x,goal.y=spot.x,spot.y
     end
-    e.order=goal;e.path=nil;e.pathTime=0
+    e.order=goal;e.path=nil;e.pathTime=0;e.blockedTime=0;e.steerTime=0;e.avoidCongestion=false
   end
   self:effect('order',x,y,0.65)
   self:toast(#units..' unidades receberam ordens.')
@@ -264,7 +276,13 @@ function World:navigate(e,x,y,dt)
     self:refreshBlocked()
     local sx=math.floor(e.x/SIZE+.5);local sy=math.floor(e.y/SIZE+.5)
     local gx=math.floor(x/SIZE+.5);local gy=math.floor(y/SIZE+.5)
-    e.path=Path.search(self,sx,sy,gx,gy)
+    if e.avoidCongestion then
+      -- A temporary traffic grid is used only for path search; stationary
+      -- obstacles still come exclusively from refreshBlocked().
+      e.path=Path.search(Movement.trafficMap(self,e),sx,sy,gx,gy)
+      e.avoidCongestion=false
+    end
+    if not e.path then e.path=Path.search(self,sx,sy,gx,gy) end
     e.pathTime=1.5
   end
   e.pathTime=e.pathTime-dt
@@ -291,15 +309,27 @@ function World:navigate(e,x,y,dt)
   local d=distance(e.x,e.y,tx,ty)
   if d<=0.001 then return true end
   local step=math.min(st.speed*dt,d)
-  local nx=e.x+(tx-e.x)*step/d;local ny=e.y+(ty-e.y)*step/d
-  local cx=math.floor(nx/SIZE+.5);local cy=math.floor(ny/SIZE+.5)
-  if cx<1 or cy<1 or cx>self.w or cy>self.h or self.blocked[cy*self.w+cx] then
-    e.path=nil;e.pathTime=0;return false
+  local moved,steered=Movement.advance(self,e,tx,ty,step)
+  if moved then
+    e.moving=true
+    -- A unit that keeps sidestepping but never gets nearer to a grid
+    -- waypoint is in traffic congestion, even though it is technically
+    -- changing coordinates. Request a fresh route around occupied tiles.
+    e.steerTime=steered and ((e.steerTime or 0)+dt) or 0
+    e.blockedTime=0
+    if e.steerTime>=0.4 then
+      e.path=nil;e.pathTime=0;e.avoidCongestion=true;e.steerTime=0
+    end
+    return true
   end
-  e.angle=(math.atan2 and math.atan2(ty-e.y,tx-e.x)) or math.atan(ty-e.y,tx-e.x)
-  e.moving=true
-  e.x,e.y=nx,ny
-  return true
+  -- Persistent traffic congestion triggers a route around the occupied
+  -- cells. Replan at most once per ~0.5 s to avoid frame-dependent thrash.
+  e.steerTime=0
+  e.blockedTime=(e.blockedTime or 0)+dt
+  if e.blockedTime>=0.5 then
+    e.path=nil;e.pathTime=0;e.avoidCongestion=true;e.blockedTime=0
+  end
+  return false
 end
 function World:update(dt)
   if self.result then return end

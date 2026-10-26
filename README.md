@@ -2,7 +2,7 @@
 
 > **OBJETIVO PRINCIPAL: reconstruir o jogo original com fidelidade 1:1**, substituindo o motor Java ME pelo **Lua + LÖVE**, sem transformar a experiência em outro jogo.
 >
-> **ESTADO ATUAL: protótipo técnico v0.8, NÃO É 1:1.** Os sistemas provisórios são ferramentas de desenvolvimento e serão substituídos à medida que o comportamento original for verificado.
+> **ESTADO ATUAL: protótipo técnico v0.13, NÃO É 1:1.** Os sistemas provisórios são ferramentas de desenvolvimento e serão substituídos à medida que o comportamento original for verificado.
 
 ## Princípio do projeto (não negociável)
 
@@ -157,9 +157,9 @@ Corrigida a duração do estado visual de ataque: uma animação `verified` não
 
 No inspetor `F2`, pressione `H` sobre uma selecao ou candidato para fixar uma referencia visual; mude de regiao com `N/M` ou de atlas com as setas. A referencia permanece a esquerda e a selecao atual aparece a direita, ambas com as proporcoes corretas e nearest-neighbor. `L` remove a referencia. **Isso nao habilita nenhuma animacao como verificada.**
 
-As 72 regioes prioritarias podem ser organizadas em seis pranchas de inspeccao, geradas com `python3 tools/build_review_gallery.py` no diretorio `docs/review_gallery/`. `INDEX.csv` vincula miniaturas a atlas e coordenadas originais. As 106 regioes de baixa prioridade seguem preservadas. Consulte [COMPARACAO_DE_POSES.md](docs/COMPARACAO_DE_POSES.md).
+As 72 regioes prioritarias foram organizadas em **seis pranchas de inspeccao** no diretorio `docs/review_gallery/`, com `INDEX.csv` vinculando cada miniatura ao atlas e as coordenadas originais. Use `python3 tools/build_review_gallery.py --verify` para conferir a fidelidade pixel a pixel das pranchas regeneradas. As 106 regioes de baixa prioridade seguem preservadas. Consulte [COMPARACAO_DE_POSES.md](docs/COMPARACAO_DE_POSES.md) para o procedimento completo.
 
-Ainda nao foram comprovados frames de movimento, ataque ou direcoes do original. A execucao real no LÖVE/Android segue pendente. O objetivo 1:1 permanece inalterado.
+Nesta etapa nao foram comprovados frames de movimento, ataque ou direcoes do original, e a execucao real no LÖVE/Android segue pendente. O objetivo 1:1 permanece inalterado.
 
 
 ## Etapa v0.12 — ordens de combate e estabilidade do núcleo
@@ -171,3 +171,29 @@ Ainda nao foram comprovados frames de movimento, ataque ou direcoes do original.
 - Esses comportamentos melhoram a **consistência do protótipo Lua**, mas ainda não foram certificados contra o executável Java original. Não implicam equivalência 1:1 de IA ou combate.
 
 Teste adicional: `lua5.3 tests/combat_orders_regression.lua` (ou `texlua` onde não houver Lua 5.3).
+
+
+## Etapa v0.13 — colisão física e tráfego de unidades
+
+- Criado `src/movement.lua`, separado do motor de combate, para colisão
+  entre soldados e tanques durante a navegação; unidades não podem ocupar
+  a mesma posição física em deslocamento.
+- A colisão contra rochas, vegetação e edifícios considera a área ocupada
+  pelo corpo da unidade, não apenas seu pixel central. Os raios adotados
+  (4,5 para infantaria e 7,3 para tanques) são **provisórios**.
+- Desvio lateral determinístico quando tropas se encontram; quando esse
+  desvio persiste, a unidade solicita novo caminho contornando células
+  ocupadas por outras tropas. O mapa permanente de obstáculos não muda.
+- Comandos de grupo procuram não reservar destinos ocupados por tropas
+  não selecionadas. A reserva de destinos continua determinística.
+- Temporizadores e sinais temporários de congestionamento ficam fora dos
+  saves. Ao carregar uma partida, seus valores são reiniciados.
+- `tests/traffic_regression.lua` cobre encontro frontal entre tropas,
+  desvio de unidade estacionária, colisão de rocha por raio, slots de
+  formação e segurança do save.
+
+**Fidelidade:** essa correção reduz sobreposição e travamentos no protótipo,
+mas o comportamento do jogo J2ME permanece **não verificado**. Não foi
+extraída nenhuma regra nova do executável original.
+
+Teste: `lua5.3 tests/traffic_regression.lua` (ou `texlua`).
