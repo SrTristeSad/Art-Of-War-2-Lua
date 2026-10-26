@@ -144,3 +144,22 @@ As correções abaixo são **engenharia de robustez**, não equivalência compro
 - CI ampliado com testes da detecção, exportação determinística, limites das regiões, interface do inspetor e temporização de ataque.
 
 **Estado do 1:1:** ainda NÃO concluído. Campanhas, controle de unidades, FPS, IA, missões e animações seguem sem certificação contra o JAR original. Apenas ferramentas de investigação e robustez do protótipo avançaram.
+
+## Marco v0.10 — triagem de candidatos sem perda de evidência
+
+- O índice `ATLAS_CANDIDATOS.csv` continua contendo as **178 regiões** dos
+  67 atlas originais. Os novos campos `review_priority` e `reason` são
+  heurísticas de navegação, **não** validação de sprites nem de animações.
+- 72 regiões de revisão prioritária; 106 de baixa prioridade (58 quase
+  abrangem o atlas inteiro, 44 são fragmentos pequenos e 4 faixas estreitas).
+  Nenhum candidato anterior foi apagado ou teve coordenadas modificadas.
+- No inspetor F2, `J` alterna revisão prioritária/todos os candidatos; `N/M`
+  respeitam o filtro e mantêm os índices originais; caixas menos promissoras
+  aparecem em cinza quando o filtro está desligado.
+- Regressões verificam triagem determinística, navegação, limites dos recortes,
+  que todos seguem `unverified`, integridade dos 67 PNGs e igualdade de pixels
+  dos 21 sprites previamente confirmados.
+
+**Pendente para a fidelidade 1:1:** sequências, direções, mapas, scripts e
+parâmetros do JAR/execução original. Esta etapa melhora a investigação, não
+certifica comportamento do jogo original.

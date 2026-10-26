@@ -5,7 +5,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'tools'))
-from detect_sprite_candidates import components,render
+from detect_sprite_candidates import components,render,review_priority
 
 class CandidateTests(unittest.TestCase):
     def test_connected_components_and_source_coords(self):
@@ -20,6 +20,21 @@ class CandidateTests(unittest.TestCase):
         self.assertGreater(count,0)
         self.assertTrue(all(r['verification']=='unverified' for r in csv.DictReader(text.splitlines())))
         self.assertIn('NOT a proven sprite',lua)
+    def test_triage_keeps_all_original_candidates(self):
+        self.assertEqual(review_priority((0, 0, 100, 100, 5000), 100, 100),
+                         ('low', 'atlas_spanning'))
+        self.assertEqual(review_priority((2, 2, 4, 3, 12), 200, 200),
+                         ('low', 'tiny_fragment'))
+        self.assertEqual(review_priority((5, 1, 100, 10, 620), 400, 200),
+                         ('low', 'thin_strip'))
+        self.assertEqual(review_priority((3, 5, 28, 21, 300), 100, 100),
+                         ('review', 'local_region'))
+        with (ROOT/'docs/ATLAS_CANDIDATOS.csv').open(newline='', encoding='utf-8') as stream:
+            rows=list(csv.DictReader(stream))
+        self.assertEqual(len(rows), 178)
+        self.assertEqual(sum(r['review_priority']=='review' for r in rows), 72)
+        self.assertTrue(all(r['verification']=='unverified' for r in rows))
+        self.assertEqual(sum(r['review_priority']=='low' for r in rows), 106)
     def test_repeatable_output(self):
         files=sorted((ROOT/'assets/original').glob('*.png'))
         csvtext,luatext,_=render(files)

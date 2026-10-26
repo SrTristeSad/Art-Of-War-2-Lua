@@ -18,6 +18,21 @@ A referência técnica disponível é o descritor **J2ME v1.12.0** (`docs/manife
 
 **Ainda não é fiel ao original:** campanhas/missões, mapas e scripts autênticos, comportamento de IA, parâmetros exatos, evolução tecnológica, todos os tipos de unidades/edifícios, HUD e menus originais, animações e efeitos completos, áudio e sincronização de simulação. Não apresentar essas partes do protótipo como engenharia reversa concluída.
 
+## v0.10 — triagem reversível dos candidatos gráficos
+
+O extrator preserva todas as **178 regiões não verificadas** dos 67 atlas,
+mas agora rotula geometricamente cada região para reduzir os falsos positivos
+na pesquisa: **72 para revisão prioritária** e **106 em baixa prioridade**
+(composição que ocupa quase todo o atlas, fragmento muito pequeno ou faixa estreita).
+Essas categorias **não validam nem rejeitam** nenhuma animação do J2ME.
+
+No inspetor `F2`, use `B` para ver regiões, `N/M` para percorrê-las e `J`
+para alternar entre **revisão prioritária** (padrão, laranja) e **todas as
+regiões** (baixa prioridade em cinza). As coordenadas e o índice original se
+mantêm estáveis. O CSV de pesquisa ganhou `review_priority` e `reason`;
+`verification` permanece sempre `unverified`. Consulte
+[`docs/REVISAO_CANDIDATOS.md`](docs/REVISAO_CANDIDATOS.md).
+
 ## Testar no Windows
 
 1. Instale o **LÖVE 11.4 ou 11.5** em <https://love2d.org/>.

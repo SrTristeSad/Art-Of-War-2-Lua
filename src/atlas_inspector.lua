@@ -4,7 +4,7 @@ local Regions=require('src.atlas_regions')
 local Catalog=require('src.atlas_catalog')
 local Draft=require('src.sequence_draft')
 local Candidates=require('src.atlas_candidates')
-local Inspector={active=false,index=1,zoom=1,files={},cache={},mouseX=nil,mouseY=nil,dragging=nil,selection=nil,message=nil,showVerified=true,showCandidates=false,candidateIndex=0,previewFrames={},previewTime=0,previewPlaying=false,previewFPS=8,exportCount=0}
+local Inspector={active=false,index=1,zoom=1,files={},cache={},mouseX=nil,mouseY=nil,dragging=nil,selection=nil,message=nil,showVerified=true,showCandidates=false,reviewOnly=true,candidateIndex=0,previewFrames={},previewTime=0,previewPlaying=false,previewFPS=8,exportCount=0}
 local DIR='assets/original/'
 local AREA={x=10,y=43,w=220,h=222}
 local function normalizedFilename(a)
@@ -53,14 +53,32 @@ function Inspector.step(shift)
   Inspector.zoom=1;Inspector.dragging=nil;Inspector.selection=nil;Inspector.message=nil;Inspector.candidateIndex=0
 end
 -- Suggested alpha components are unverified. They never become active sprites.
+-- Keep the original indices stable even when only review-priority boxes are shown.
+function Inspector.visibleCandidateIndices()
+  local boxes=Candidates[Inspector.selectedFile()] or {}
+  local result={}
+  for index,box in ipairs(boxes) do
+    if not Inspector.reviewOnly or box.priority=='review' then
+      result[#result+1]=index
+    end
+  end
+  return result
+end
 function Inspector.nextCandidate(direction)
   local boxes=Candidates[Inspector.selectedFile()] or {}
-  if #boxes==0 then Inspector.message='Sem candidatos neste atlas';return false end
-  local nextIndex=((Inspector.candidateIndex-1+(direction or 1))%#boxes)+1
+  local indices=Inspector.visibleCandidateIndices()
+  if #indices==0 then Inspector.message='Sem candidatos no filtro';return false end
+  local position=0
+  for i,index in ipairs(indices) do
+    if index==Inspector.candidateIndex then position=i;break end
+  end
+  local offset=direction and (direction<0 and -1 or 1) or 1
+  if position==0 and offset<0 then position=1 end
+  local nextIndex=indices[((position-1+offset)%#indices)+1]
   Inspector.candidateIndex=nextIndex
   local box=boxes[nextIndex]
   Inspector.selection={x=box.x,y=box.y,w=box.w,h=box.h}
-  Inspector.message=string.format('Candidato %d/%d (nao verificado)',nextIndex,#boxes)
+  Inspector.message=string.format('Regiao %d/%d %s (nao verif.)',nextIndex,#boxes,box.reason or '')
   return true
 end
 function Inspector.changeZoom(delta)
@@ -158,6 +176,7 @@ function Inspector.keypressed(key)
   elseif key=='end' then Inspector.index=math.max(1,#Inspector.files);Inspector.zoom=1;Inspector.selection=nil;Inspector.dragging=nil
   elseif key=='v' then Inspector.showVerified=not Inspector.showVerified
   elseif key=='b' then Inspector.showCandidates=not Inspector.showCandidates
+  elseif key=='j' then Inspector.reviewOnly=not Inspector.reviewOnly;Inspector.candidateIndex=0;Inspector.selection=nil;Inspector.message=Inspector.reviewOnly and 'Filtro: revisao prioritaria' or 'Filtro: todas as regioes'
   elseif key=='n' then Inspector.nextCandidate(1)
   elseif key=='m' then Inspector.nextCandidate(-1)
   elseif key=='g' then Inspector.addFrame()
@@ -245,9 +264,12 @@ function Inspector.draw()
     if Inspector.showCandidates then
       for i,candidate in ipairs(Candidates[file] or {}) do
         local focused=i==Inspector.candidateIndex
-        g.setColor(1,focused and .9 or .58,.15,focused and 1 or .65)
-        g.rectangle('line',x+candidate.x*scale,y+candidate.y*scale,
+        if not Inspector.reviewOnly or candidate.priority=='review' then
+          if candidate.priority=='low' then g.setColor(.65,.66,.68,focused and 1 or .38)
+          else g.setColor(1,focused and .9 or .58,.15,focused and 1 or .65) end
+          g.rectangle('line',x+candidate.x*scale,y+candidate.y*scale,
           candidate.w*scale,candidate.h*scale)
+        end
       end
     end
     if Inspector.selection then
@@ -302,7 +324,7 @@ function Inspector.draw()
   write('< ANT',21,285);write('ZOOM 1x',96,285);write('PROX >',174,285)
   local r=Inspector.selection
   local info=r and string.format('%d,%d  %dx%d  S:salvar C:limpar',r.x,r.y,r.w,r.h)
-    or (Inspector.pixelX and ('Pixel: '..Inspector.pixelX..', '..Inspector.pixelY) or 'Setas:PNG N/M:candidato B:caixas')
+    or (Inspector.pixelX and ('Pixel: '..Inspector.pixelX..', '..Inspector.pixelY) or 'Setas:PNG N/M:regiao J:filtro')
   if not r and Inspector.pixelX then
     for name,record in pairs(Catalog) do
       if record.atlas==file and Inspector.pixelX>=record.x and Inspector.pixelY>=record.y
@@ -321,8 +343,8 @@ function Inspector.draw()
   else
     local count=0
     for _,entry in pairs(Catalog) do if entry.atlas==file then count=count+1 end end
-    write(string.format('V:%d exatos B:%d candidatos %s',count,#(Candidates[file] or {}),
-      Inspector.showCandidates and '[on]' or '[off]'),8,267)
+    write(string.format('V:%d B:%d J:%d %s',count,#(Candidates[file] or {}),
+      #Inspector.visibleCandidateIndices(),Inspector.reviewOnly and 'revisao' or 'todos'),8,267)
   end
   g.setColor(1,1,1,1)
 end
