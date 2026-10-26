@@ -23,3 +23,6 @@ imagem estatica existente; o deslocamento minimo e um **placeholder**.
 
 **Importante:** o projeto ainda nao possui os quadros originais nem as suas
 tabelas de duracao. Adicionar imagens nao prova fidelidade 1:1.
+
+
+**Nota v0.6:** o catálogo de 21 recortes pixel-exact se refere a imagens estáticas usadas no protótipo, **não** determina quais frames/direções representam idle, walk, attack ou death. As pastas opcionais de frames continuam aguardando reconstrução verificada.

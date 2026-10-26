@@ -1,4 +1,12 @@
-local Art = { images = {}, animations={} }
+local Catalog=require('src.atlas_catalog')
+local Art = { images = {}, animations={},atlasFrames={},atlasImages={},catalog=Catalog }
+
+-- Atlas entries store their original source rectangle and texture quad.
+-- Standalone PNGs remain an isolated fallback for incomplete packages
+-- or renderers that do not expose LÖVE's Quad API.
+local function atlasFrame(name)
+  return Art.atlasFrames[name] or Art.images[name]
+end
 
 local function loadImage(file)
   if not love.filesystem.getInfo(file) then return nil end
@@ -9,13 +17,37 @@ local function loadImage(file)
 end
 
 function Art.load()
-  Art.images={};Art.animations={}
+  Art.images={};Art.animations={};Art.atlasFrames={};Art.atlasImages={}
   local names={'background','grass','grass2','dirt','dirt2','forest','forest2','rocks',
     'blue_hq','blue_barracks','blue_factory','blue_turret',
     'red_hq','red_barracks','red_factory','red_turret',
     'blue_infantry','red_infantry','blue_tank','red_tank','explosion'}
   for _,name in ipairs(names) do
     Art.images[name]=loadImage('assets/sprites/'..name..'.png')
+  end
+  -- Verified 1:1 pixel crops. The atlas texture is shared by all sprites
+  -- that reference it; no resampling, texture copies or extra drawn sprites.
+  local canQuad=type(love.graphics.newQuad)=='function'
+  if canQuad then
+    for name,region in pairs(Catalog) do
+      local path='assets/original/'..region.atlas
+      local texture=Art.atlasImages[region.atlas]
+      if not texture then
+        texture=loadImage(path)
+        if texture then Art.atlasImages[region.atlas]=texture end
+      end
+      if texture then
+        local width,height=texture:getDimensions()
+        if region.x>=0 and region.y>=0 and region.w>0 and region.h>0
+          and region.x+region.w<=width and region.y+region.h<=height then
+          local ok,quad=pcall(love.graphics.newQuad,region.x,region.y,
+            region.w,region.h,width,height)
+          if ok and quad then
+            Art.atlasFrames[name]={image=texture,quad=quad,w=region.w,h=region.h}
+          end
+        end
+      end
+    end
   end
   -- Optional standalone frames. A modder or asset-restoration pass can add
   -- assets/animations/blue_infantry/walk_01.png, walk_02.png etc. No fake
@@ -39,19 +71,27 @@ end
 
 local function drawImage(image,x,y,w,h,angle,alpha)
   if not image then return false end
-  local iw,ih=image:getDimensions()
+  local frame=type(image)=='table' and image.image and image.quad and image or nil
+  local texture=frame and frame.image or image
+  local iw,ih
+  if frame then iw,ih=frame.w,frame.h else iw,ih=texture:getDimensions() end
   love.graphics.setColor(1,1,1,alpha or 1)
   if angle and angle~=0 then
-    love.graphics.draw(image,x+w/2,y+h/2,angle,w/iw,h/ih,iw/2,ih/2)
+    if frame then
+      love.graphics.draw(texture,frame.quad,x+w/2,y+h/2,angle,w/iw,h/ih,iw/2,ih/2)
+    else
+      love.graphics.draw(texture,x+w/2,y+h/2,angle,w/iw,h/ih,iw/2,ih/2)
+    end
   else
-    love.graphics.draw(image,x,y,0,w/iw,h/ih)
+    if frame then love.graphics.draw(texture,frame.quad,x,y,0,w/iw,h/ih)
+    else love.graphics.draw(texture,x,y,0,w/iw,h/ih) end
   end
   love.graphics.setColor(1,1,1,1)
   return true
 end
 
 function Art.draw(name,x,y,w,h,angle,alpha)
-  if not drawImage(Art.images[name],x,y,w,h,angle,alpha) then
+  if not drawImage(atlasFrame(name),x,y,w,h,angle,alpha) then
     love.graphics.setColor(.6,.6,.6,alpha or 1)
     love.graphics.rectangle('fill',x,y,w,h)
     love.graphics.setColor(1,1,1,1)
@@ -60,9 +100,11 @@ end
 
 function Art.fitSize(name,maxW,maxH,state,time,fps)
   local frames=(Art.animations[name] or {})[state or 'idle']
-  local image=frames and frames[require('src.animation').frame(time,#frames,fps or 8)] or Art.images[name]
+  local image=frames and frames[require('src.animation').frame(time,#frames,fps or 8)] or atlasFrame(name)
   if not image then return maxW,maxH,image end
-  local iw,ih=image:getDimensions()
+  local iw,ih
+  if type(image)=='table' and image.quad then iw,ih=image.w,image.h
+  else iw,ih=image:getDimensions() end
   if iw<=0 or ih<=0 then return maxW,maxH,image end
   local factor=math.min(maxW/iw,maxH/ih)
   return iw*factor,ih*factor,image

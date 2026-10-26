@@ -35,3 +35,14 @@ O inspetor **pausa a simulação** enquanto está aberto. Sua interface é uma f
 3. Relacionar cada recorte a classe/unidade, estado, direção, posição, duração e condição de transição, citando o trecho de bytecode de origem.
 4. Validar cada menu/HUD/cenário em capturas do original e preencher uma matriz de paridade por tela.
 5. Substituir os recortes e parâmetros provisórios somente após verificar a equivalência.
+
+
+## Catálogo de recortes verificados v0.6
+
+Os 21 sprites já utilizados no protótipo foram comparados aos atlas em nível de pixels RGBA. Cada correspondência está em `ATLAS_SPRITES_VERIFICADOS.csv` e `../src/atlas_catalog.lua`, e pode ser revalidada com:
+
+```bash
+python3 tools/verify_sprite_provenance.py
+```
+
+O renderizador usa Quads LÖVE com esses recortes no jogo, preservando as imagens originais. `F2` mostra os recortes verificados em verde; `V` alterna a visualização. Os CSVs exportados manualmente continuam marcados como `unverified`, e não são carregados automaticamente como imagens do jogo.

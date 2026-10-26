@@ -26,11 +26,11 @@ Quando não houver evidência suficiente, anotar explicitamente **provisório / 
 | 3. Motor determinístico | Atualização, grade, pathfinding, colisão, visão e interações iguais ao original | **Protótipo v0.2: tick fixo e regressões; paridade J2ME não validada** |
 | 4. RTS e progressão | Dinheiro, construção, produção, pesquisa, unidades, parâmetros, upgrades | **Protótipo parcial** |
 | 5. Inteligência artificial | Prioridades, alvos, ordens, defesa, agressividade e comportamento de missões | **Protótipo simples** |
-| 6. Interface 1:1 | Abertura, menus, HUD, comandos, seleção, telas, transições e fontes | **HUD provisório; v0.5: seleção de atlas com CSV (ferramenta não original)** |
+| 6. Interface 1:1 | Abertura, menus, HUD, comandos, seleção, telas, transições e fontes | **HUD provisório; v0.6: inspetor exibe contornos dos recortes com igualdade RGBA; não é HUD original** |
 | 7. Conteúdo completo | Todos os mapas, missões, campanhas, eventos e condições de vitória | **Pendente** |
-| 8. Audiovisual | Animações, partículas, sprites corretos, efeitos sonoros e música | **Protótipo v0.4: PNG proporcional, vegetação e unidades em ordem Y, FX, inventário dos 67 atlas; recortes v0.5 sem verificação de identidade; dados originais incompletos** |
+| 8. Audiovisual | Animações, partículas, sprites corretos, efeitos sonoros e música | **Protótipo v0.6: 21 sprites mapeados pixel a pixel em 12 atlas; Quad LÖVE com fallback, animações ainda não verificadas** |
 | 9. Windows e Android | Mesma lógica em ambas as plataformas; comandos e renderização adaptados | **Windows e Android não validados em dispositivo** |
-| 10. Paridade final | Testes comparativos, correção de divergências e regressão | **Regressões locais v0.5; comparações 1:1 pendentes** |
+| 10. Paridade final | Testes comparativos, correção de divergências e regressão | **Regressões locais v0.6; comparações 1:1 de comportamento pendentes** |
 
 ## Matriz obrigatória de fidelidade
 
@@ -94,11 +94,18 @@ As correções abaixo são **engenharia de robustez**, não equivalência compro
 
 **Importante:** inspetor, regra de profundidade e demais ferramentas v0.4 são melhorias técnicas demonstráveis, **não prova de paridade** com o programa J2ME. Mapas, HUD, frames, scripts, atributos e campanhas permanecem pendentes de extração do JAR.
 
-## Marco v0.5 — registro de regiões de atlas sem inventar identificação
+## Marco v0.5 — catalogação manual de regiões
 
-- A partir do inspetor `F2`, clique e arraste sobre um PNG original para marcar uma região em coordenadas inteiras do próprio arquivo; `C` limpa; `S` anexa entrada a `atlas_regions.csv` no diretório de save do LÖVE.
-- `src/atlas_regions.lua` valida limites, dimensões, origem em zero e serializa CSV marcando explicitamente `unverified`. Alterar zoom não altera coordenadas já marcadas.
-- `tools/export_atlas_regions.py` exporta PNGs derivados pixel-exatos dos recortes com verificação de limites e sem sobrescrita; não edita os 67 PNGs originais nem insere sprites presumidos na renderização do jogo.
-- Corrigido o roteamento de movimento e soltura do mouse quando o inspetor é aberto no menu (sem mundo inicializado). Testes Lua e Python para regressões de seleção, CSV, coordenadas, recortes, path traversal e duplicatas.
+- Seleção visual e registro de regiões por coordenadas originais no inspetor F2;
+- Exportação isolada em PNG por `tools/export_atlas_regions.py`, sem regravar fontes;
+- Todo recorte manual fica `unverified` até prova independente.
 
-**Limites:** esses recortes não são identificações verificadas de frames/sprites. Para alcançar 1:1, ainda é necessário comparar os atlas à execução/bytecode original. O fluxo de exportação depende de Pillow; validação visual no runtime LÖVE e plataformas reais continua pendente.
+## Marco v0.6 — correspondências por igualdade de pixels
+
+- Comparação RGBA encontrou **21 de 21 sprites atuais idênticos** aos recortes localizados em **12 atlas de origem** entre os 67 PNGs fornecidos.
+- `src/atlas_catalog.lua` e `docs/ATLAS_SPRITES_VERIFICADOS.csv` documentam a mesma posição e dimensões; `tools/verify_sprite_provenance.py` verifica novamente todos os pixels e detecta divergências; nenhuma alteração nos PNGs originais.
+- `src/art.lua` passa a renderizar os sprites originais como **LÖVE Quads**, compartilhando a mesma textura para recortes do mesmo atlas, sem gerar novo PNG. As imagens isoladas de `assets/sprites/` continuam como fallback se um atlas estiver ausente ou sem Quad disponível.
+- O inspetor `F2` passa a marcar em verde recortes com igualdade de pixels, com tecla `V` para ligar/desligar a sobreposição. A identificação manual por CSV continua separada.
+- Regressões validam recortes, desenhar rotacionado, transparência através da imagem original, fallback por atlas ausente, catálogo, integridade do material e núcleo.
+
+**Precisão do marco:** a designação `pixel-exact` comprova **somente igualdade dos pixels destes 21 recortes com os PNGs originais recebidos**. Não comprova que sejam os quadros usados em todos os estados do RTS J2ME, nem o timing de animação, nem a interface/missões/IA/regras. Compor a primeira cena do jogo continua provisório. Próxima meta: recuperar classes e a tabela original de animações/direções do JAR, registrar evidências e substituir suposições.

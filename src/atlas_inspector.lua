@@ -1,7 +1,8 @@
 -- Ferramenta de engenharia reversa (F2). Nao integra a interface original.
 -- Mostra os PNGs brutos sem modificar os atlas ou criar frames ficticios.
 local Regions=require('src.atlas_regions')
-local Inspector={active=false,index=1,zoom=1,files={},cache={},mouseX=nil,mouseY=nil,dragging=nil,selection=nil,message=nil}
+local Catalog=require('src.atlas_catalog')
+local Inspector={active=false,index=1,zoom=1,files={},cache={},mouseX=nil,mouseY=nil,dragging=nil,selection=nil,message=nil,showVerified=true}
 local DIR='assets/original/'
 local AREA={x=10,y=43,w=220,h=222}
 local function normalizedFilename(a)
@@ -102,6 +103,7 @@ function Inspector.keypressed(key)
   elseif key=='pagedown' then Inspector.step(10)
   elseif key=='home' then Inspector.index=1;Inspector.zoom=1;Inspector.selection=nil;Inspector.dragging=nil
   elseif key=='end' then Inspector.index=math.max(1,#Inspector.files);Inspector.zoom=1;Inspector.selection=nil;Inspector.dragging=nil
+  elseif key=='v' then Inspector.showVerified=not Inspector.showVerified
   elseif key=='s' then Inspector.saveSelection()
   elseif key=='c' then Inspector.selection=nil;Inspector.dragging=nil;Inspector.message=nil
   elseif key=='+' or key=='=' or key=='kp+' then Inspector.changeZoom(1)
@@ -168,6 +170,15 @@ function Inspector.draw()
     g.stencil(function() g.rectangle('fill',AREA.x,AREA.y,AREA.w,AREA.h) end,'replace',1)
     g.setStencilTest('greater',0)
     g.setColor(1,1,1,1);g.draw(image,x,y,0,scale,scale)
+    if Inspector.showVerified then
+      for _,record in pairs(Catalog) do
+        if record.atlas==file then
+          g.setColor(.47,1,.28,.95)
+          g.rectangle('line',x+record.x*scale,y+record.y*scale,
+            record.w*scale,record.h*scale)
+        end
+      end
+    end
     if Inspector.selection then
       local r=Inspector.selection
       g.setColor(.1,.9,.98,.20)
@@ -195,8 +206,24 @@ function Inspector.draw()
   local r=Inspector.selection
   local info=r and string.format('%d,%d  %dx%d  S:salvar C:limpar',r.x,r.y,r.w,r.h)
     or (Inspector.pixelX and ('Pixel: '..Inspector.pixelX..', '..Inspector.pixelY) or 'Setas: PNG  |  roda: zoom')
+  if not r and Inspector.pixelX then
+    for name,record in pairs(Catalog) do
+      if record.atlas==file and Inspector.pixelX>=record.x and Inspector.pixelY>=record.y
+        and Inspector.pixelX<record.x+record.w and Inspector.pixelY<record.y+record.h then
+        info=name..' (pixel-exact)'
+        break
+      end
+    end
+  end
   write(info,8,304)
-  if Inspector.message then write(Inspector.message:sub(1,39),8,267) end
+  if Inspector.message then write(Inspector.message:sub(1,39),8,267)
+  elseif not image then -- empty source
+  else
+    local count=0
+    for _,entry in pairs(Catalog) do if entry.atlas==file then count=count+1 end end
+    write(string.format('V: %d recortes pixel-exact %s',count,
+      Inspector.showVerified and '[on]' or '[off]'),8,267)
+  end
   g.setColor(1,1,1,1)
 end
 return Inspector
