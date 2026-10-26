@@ -48,6 +48,35 @@ function Movement.canOccupy(world,entity,x,y)
   return true
 end
 
+-- Test the entire movement segment, not just its endpoint. This prevents
+-- tunneling through small units and walls when a mod introduces faster units
+-- or a caller requests a longer-than-normal simulation step.
+function Movement.sweepClear(world,entity,x1,y1)
+  local dx,dy=x1-entity.x,y1-entity.y
+  local length=math.sqrt(dx*dx+dy*dy)
+  local slices=math.max(1,math.ceil(length/math.min(3,radius(entity)*0.5)))
+  for i=1,slices do
+    local t=i/slices
+    if not Movement.canOccupy(world,entity,entity.x+dx*t,entity.y+dy*t) then
+      return false
+    end
+  end
+  return true
+end
+
+-- Inflate the static route grid by the physical unit footprint. The blocked
+-- grid remains unmodified, so different-sized units and saves are independent.
+function Movement.clearanceMap(world,entity)
+  local blocked={}
+  for gy=1,world.h do for gx=1,world.w do
+    local key=gy*world.w+gx
+    if not solidClear(world,gx*TILE,gy*TILE,radius(entity)) then
+      blocked[key]=true
+    end
+  end end
+  return {w=world.w,h=world.h,blocked=blocked}
+end
+
 -- Follow the planned waypoint, then probe deterministic side angles if
 -- another unit is occupying the direct route. Never teleport or phase
 -- through blocked terrain. Opposite ID parity prefers opposite sides.
@@ -63,7 +92,7 @@ function Movement.advance(world,entity,tx,ty,step)
     local ca,sa=math.cos(a),math.sin(a)
     local ux,uy=vx*ca-vy*sa,vx*sa+vy*ca
     local nx,ny=entity.x+ux*step,entity.y+uy*step
-    if Movement.canOccupy(world,entity,nx,ny) then
+    if Movement.sweepClear(world,entity,nx,ny) then
       entity.angle=(math.atan2 and math.atan2(uy,ux)) or math.atan(uy,ux)
       entity.x,entity.y=nx,ny
       return true, angle~=0
@@ -75,22 +104,29 @@ end
 -- Congestion-aware replanning only when local avoidance has been blocked
 -- repeatedly. Do not change the permanent blocked grid or the saves.
 function Movement.trafficMap(world,entity)
-  local blocked={}
-  for k,v in pairs(world.blocked) do blocked[k]=v end
+  local map=Movement.clearanceMap(world,entity)
   local sx=math.floor(entity.x/TILE+.5)
   local sy=math.floor(entity.y/TILE+.5)
+  -- An occupied grid cell can belong to a unit whose center is between
+  -- tiles. Mark every grid CENTER which would overlap its actual footprint,
+  -- not just the tile containing the other center.
   for _,other in ipairs(world.entities) do
     if other~=entity and other.alive and not other.building then
-      local gx=math.floor(other.x/TILE+.5)
-      local gy=math.floor(other.y/TILE+.5)
-      if gx>=1 and gy>=1 and gx<=world.w and gy<=world.h
-         and not (gx==sx and gy==sy) then
-        -- Never block the start tile: nearby units can share a grid
-        -- coordinate without physically overlapping.
-        blocked[gy*world.w+gx]=true
-      end
+      local clearance=radius(entity)+radius(other)+0.5
+      local x0=math.max(1,math.ceil((other.x-clearance)/TILE))
+      local x1=math.min(world.w,math.floor((other.x+clearance)/TILE))
+      local y0=math.max(1,math.ceil((other.y-clearance)/TILE))
+      local y1=math.min(world.h,math.floor((other.y+clearance)/TILE))
+      for gy=y0,y1 do for gx=x0,x1 do
+        if not (gx==sx and gy==sy) then
+          local dx,dy=gx*TILE-other.x,gy*TILE-other.y
+          if dx*dx+dy*dy<clearance*clearance then
+            map.blocked[gy*world.w+gx]=true
+          end
+        end
+      end end
     end
   end
-  return {w=world.w,h=world.h,blocked=blocked}
+  return map
 end
 return Movement

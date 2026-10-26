@@ -197,3 +197,31 @@ mas o comportamento do jogo J2ME permanece **não verificado**. Não foi
 extraída nenhuma regra nova do executável original.
 
 Teste: `lua5.3 tests/traffic_regression.lua` (ou `texlua`).
+
+
+## Etapa v0.14 — movimentação contínua e saída segura de unidades
+
+- `src/movement.lua` verifica **todo o segmento percorrido**, em incrementos de até
+  3 pixels ou metade do raio físico da tropa. Mesmo quando um mod fornecer
+  um passo de movimentação maior, ela não poderá atravessar outra unidade
+  ou rocha simplesmente porque o destino está livre.
+- A navegação cria um mapa de **espaço livre por unidade** a partir do mapa
+  estático, sem modificar os obstáculos permanentes nem os arquivos de save.
+  O mapa de congestionamento considera as células alcançadas pelo raio físico
+  de cada soldado/tanque, inclusive quando ele está entre dois tiles.
+- Ao concluir uma produção, `World:spawn` verifica a área ocupada pelo novo
+  soldado/tanque contra **todas** as tropas, prédios, rochas e bordas. Se não
+  houver local seguro, a produção permanece aguardando sem perder a unidade.
+- Novo teste `tests/traffic_clearance_regression.lua` cobre travessia em passo
+  grande, barreiras, ocupação entre células, saída de fábrica e separação
+  entre mapa permanente e tráfego. Também roda no GitHub Actions.
+
+**Limites desta etapa:** essas colisões e raios são regras provisórias do
+protótipo, ainda **não certificadas** contra Art of War 2 para Java ME.
+Cenários com muitas tropas tentando cruzar o mesmo corredor estreito
+ainda podem apresentar espera prolongada: não foi implementado um sistema
+de reserva de faixas ou negociação de prioridade entre esquadrões.
+A execução gráfica no LÖVE Windows/Android continua pendente.
+
+Execute `lua5.3 tests/traffic_clearance_regression.lua` (ou `texlua`)
+para repetir os testes específicos desta etapa.

@@ -240,8 +240,10 @@ function World:spawn(building,kind)
     for i=0,11 do
       local a=i*math.pi/6;local x=building.x+math.cos(a)*r*SIZE
       local y=building.y+math.sin(a)*r*SIZE
-      local gridx=math.floor(x/SIZE+.5);local gridy=math.floor(y/SIZE+.5)
-      if x>0 and x<self.w*SIZE and y>0 and y<self.h*SIZE and not self.blocked[gridy*self.w+gridx] and not self:entityAt(x,y) then
+      -- Check the whole produced unit footprint against terrain, buildings
+      -- and ALL living units, not just the destination's center tile.
+      local candidate={kind=kind,x=x,y=y}
+      if Movement.canOccupy(self,candidate,x,y) then
         return self:add(kind,building.team,x,y)
       end
     end
@@ -282,7 +284,9 @@ function World:navigate(e,x,y,dt)
       e.path=Path.search(Movement.trafficMap(self,e),sx,sy,gx,gy)
       e.avoidCongestion=false
     end
-    if not e.path then e.path=Path.search(self,sx,sy,gx,gy) end
+    if not e.path then
+      e.path=Path.search(Movement.clearanceMap(self,e),sx,sy,gx,gy)
+    end
     e.pathTime=1.5
   end
   e.pathTime=e.pathTime-dt

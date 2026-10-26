@@ -200,3 +200,19 @@ Teste adicional: `lua5.3 tests/combat_orders_regression.lua` (ou `texlua` onde n
 
 **Status 1:1:** não atingido. Raios, velocidades e lógica de desvio ainda
 são escolhas provisórias da reconstrução.
+
+
+## Etapa v0.14 — integridade de trajetos e produção de unidades
+
+**Concluído na reconstrução provisória:** colisão amostrada ao longo de
+segmentos de movimento (`Movement.sweepClear`), mapa de navegação por
+footprint (`Movement.clearanceMap`), marcação de células de tráfego
+alcançadas pelo corpo de unidades entre tiles e spawn com validação
+física completa. Novos testes verificam travessias rápidas, corredor
+bloqueado, desvio e saída segura de tanques de uma fábrica.
+
+**Ainda pendente:** demonstrar como as tropas são dirigidas no executável
+J2ME original, reproduzir seu fluxo real de missões, calibrar física,
+controles/tempos, evitar bloqueios prolongados em vias de mão única, testar
+renderização em LÖVE real no Windows e Android. A etapa não estabelece
+fidelidade 1:1 nem afirma conhecer a lógica da IA original.
