@@ -230,3 +230,11 @@ fidelidade 1:1 nem afirma conhecer a lógica da IA original.
 **Entregue:** preferência estável por ID para duas tropas com ordens contrárias. A unidade que cede procura uma baia lateral realmente alcançável (checagem de colisão contínua); estaciona enquanto a tropa prioritária passa e depois retoma a ordem original. Uma baia invalidada pelo tráfego pode ser abandonada, sem esperar indefinidamente. Não há teleporte, atravessamento de entidades ou mutação do mapa. Estado de espera e pausa de replanejamento ficam fora dos saves. Testes específicos e integração ao CI.
 
 **Não-canônico / pendente:** a política de preferência é exclusiva do protótipo Lua, e **não** pode ser apresentada como comportamento do Art of War 2 J2ME sem evidência. Gargalos sem área de manobra ainda podem resultar em impasse físico. Faltam o JAR integral para confirmar regras, mapas e missões e testes gráficos reais no LÖVE e Android.
+
+## v0.17 — carregamento de mapas experimentais e reserva de passagem
+
+- **Concluído (infraestrutura não-canônica):** `src/mission.lua` define leitura de dados segura, valida geometria, terreno, estruturas, formações iniciais e economia sem executar código; `missions/training_crossroads.tbl` documenta um exemplo navegável e foi conectado ao novo botão de menu **MAPA EXPERIMENTAL**. O save mantém agora o tamanho real do cenário e o seu identificador.
+- **Concluído (provisório):** unidades em manobra de cessão reservam áreas laterais exclusivas; outra unidade não pode agendar a mesma vaga. Corrigida a ordenação instável das alternativas de estacionamento; adicionado teste de regressão.
+- **Pendente:** sistema de múltiplas filas de esquadrões sob alta densidade, detecção e resolução de deadlocks sem área lateral, mapas reais, scripts de campanha, objetivos e gatilhos do JAR e paridade de colisão. **Nenhum cenário novo ou regra de tráfego desta etapa foi comprovado contra o original.**
+
+Detalhes do formato provisório: [docs/MAPAS_EXPERIMENTAIS.md](docs/MAPAS_EXPERIMENTAIS.md).

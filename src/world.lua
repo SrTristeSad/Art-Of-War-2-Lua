@@ -2,6 +2,7 @@ local Art = require('src.art')
 local Animation = require('src.animation')
 local Path = require('src.path')
 local Movement = require('src.movement')
+local Mission = require('src.mission')
 local World = {}; World.__index=World
 local SIZE=16
 local STATS={
@@ -13,7 +14,7 @@ local STATS={
   turret={cost=200,hp=330,size=31,range=100,dmg=14,cooldown=0.84},
 }
 local function distance(x,y,a,b) return math.sqrt((x-a)^2+(y-b)^2) end
-function World.new(mode,level,seed)
+function World.new(mode,level,seed,missionData)
   local self=setmetatable({},World)
   self.mode=mode or 'scenario';self.level=level or 1
   self.seed=seed or 731;self.elapsed=0;self.w=46;self.h=38;self.tile=SIZE
@@ -24,6 +25,11 @@ function World.new(mode,level,seed)
   self.terrain={};self.blocked={};self.obstacles={};self.queues={}
   self.tickRemainder=0;self.rngState=self.seed
   self.effects={};self.preview=nil
+  if missionData then
+    local ok,err=Mission.apply(self,missionData)
+    if not ok then return nil,err end
+    return self
+  end
   local function rand(n) return self:random(n) end
   self.rand=rand
   for y=1,self.h do

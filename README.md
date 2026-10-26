@@ -247,3 +247,13 @@ para repetir os testes específicos desta etapa.
 - `tests/chokepoint_yield_regression.lua` cobre corredor com baia, corredor sem baia, colisões, limites do terreno, mudança de ordem e persistência. A suíte também roda na automação do GitHub.
 
 **Limitação importante:** em corredor estreito sem nenhuma posição de ultrapassagem, duas unidades podem ficar paradas; isso é um bloqueio físico legítimo, não algo corrigível atravessando paredes. A estratégia continua provisória até comparação com o executável Java original e não demonstra fidelidade 1:1. Execução visual em LÖVE e Android segue pendente.
+
+## Atualização v0.17 — dados de mapas e coordenação de passagem
+
+**Mapa experimental selecionável:** o novo botão **MAPA EXPERIMENTAL** carrega `missions/training_crossroads.tbl` (36×26), com terreno, obstáculos, unidades e recursos iniciais definidos em dados. Não representa nenhuma missão original. O leitor de mapas utiliza o parser sem execução de código de `src/safe_table.lua`, restringe os arquivos acessíveis e rejeita mapas malformados. A opção de batalha livre anterior permanece inalterada. Consulte [MAPAS_EXPERIMENTAIS.md](docs/MAPAS_EXPERIMENTAIS.md).
+
+**Saves de mapas diferentes:** dimensões `w/h`, tamanho do tile e identificador do mapa agora são persistidos. Saves antigos continuam carregando na geometria padrão; geometrias alteradas e inválidas são rejeitadas.
+
+**Vários esquadrões:** a escolha de área lateral verifica também as **reservas de estacionamento temporário** de outras tropas, impedindo que dois soldados reservem o mesmo espaço antes que qualquer um chegue lá. Foi corrigida a ordenação das opções de passagem (comparador estrito) quando há múltiplos candidatos. O mecanismo continua **provisório**: áreas sem passagem continuam fisicamente bloqueadas e ainda não existe algoritmo completo de fluxo para grandes exércitos.
+
+**Testes:** `tests/mission_loader_regression.lua` e `tests/squad_bay_reservation_regression.lua`; ambos adicionados ao GitHub Actions. A validação gráfica no LÖVE real, no Android e a equivalência com o JAR seguem **pendentes**.

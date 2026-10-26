@@ -21,7 +21,7 @@ function Save.write(world)
   local copy={format=SAVE_FORMAT}
   for _,key in ipairs({'seed','mode','level','elapsed','money','income','entities',
     'nextId','obstacles','terrain','camera','result','incomeTime','aiTime',
-    'rngState','tickRemainder'}) do
+    'rngState','tickRemainder','w','h','tile','mapId'}) do
     copy[key]=world[key]
   end
   -- Do not serialize transient navigation caches or mutate live entities.
@@ -44,6 +44,16 @@ function Save.read(World)
   if not data then return nil,'Save invalido: '..tostring(errorMessage) end
   if type(data.seed)~='number' or type(data.entities)~='table' or type(data.money)~='table' then return nil,'Save incompleto' end
   if data.format and data.format~=SAVE_FORMAT then return nil,'Versao de save nao suportada' end
+  if (data.w and (type(data.w)~='number' or data.w<16 or data.w>96 or data.w%1~=0))
+      or (data.h and (type(data.h)~='number' or data.h<16 or data.h>96 or data.h%1~=0)) then
+    return nil,'Dimensoes de save invalidas'
+  end
+  if (data.w==nil)~=(data.h==nil) or (data.tile~=nil and data.tile~=16) then
+    return nil,'Geometria de save inconsistente'
+  end
+  if data.mapId~=nil and (type(data.mapId)~='string' or #data.mapId>60) then
+    return nil,'Identificador de mapa invalido'
+  end
   local world=World.new(data.mode,data.level,data.seed)
   for k,v in pairs(data) do world[k]=v end
   world.rngState=data.rngState or world.rngState

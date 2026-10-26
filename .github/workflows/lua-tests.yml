@@ -19,6 +19,8 @@ jobs:
           lua5.3 tests/traffic_clearance_regression.lua
           lua5.3 tests/squad_formation_regression.lua
           lua5.3 tests/chokepoint_yield_regression.lua
+          lua5.3 tests/squad_bay_reservation_regression.lua
+          lua5.3 tests/mission_loader_regression.lua
       - name: Test sprites and visual events (mock)
         run: lua5.3 tests/visual_regression.lua
       - name: Test atlas inspection and depth rendering (mock)

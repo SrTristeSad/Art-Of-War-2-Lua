@@ -183,14 +183,29 @@ function Movement.passingBay(world,entity,other,tx,ty)
       local by=entity.y+side*vx*offset
       if offset>=needed and Movement.canOccupy(world,entity,bx,by)
           and Movement.sweepClear(world,entity,bx,by) then
-        options[#options+1]={x=bx,y=by,offset=offset,side=side}
+        -- A yielding unit might still be en route to its reserved parking
+        -- spot. Prevent following units from reserving the same bay.
+        local reserved=false
+        for _,waiting in ipairs(world.entities) do
+          if waiting~=entity and waiting.alive and waiting.trafficYield then
+            local stop=waiting.trafficYield
+            local required=radius(entity)+radius(waiting)+1
+            if (bx-stop.x)^2+(by-stop.y)^2<required*required then
+              reserved=true;break
+            end
+          end
+        end
+        if not reserved then
+          options[#options+1]={x=bx,y=by,offset=offset,side=side}
+        end
       end
     end
   end
   table.sort(options,function(a,b)
     if a.offset~=b.offset then return a.offset<b.offset end
     -- Stable deterministic side preference by id.
-    return a.side==(entity.id%2==0 and 1 or -1)
+    local preferred=(entity.id%2==0 and 1 or -1)
+    return a.side==preferred and b.side~=preferred
   end)
   return options[1]
 end

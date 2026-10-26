@@ -3,6 +3,7 @@ local Art=require('src.art')
 local UI=require('src.ui')
 local World=require('src.world')
 local Save=require('src.save')
+local Mission=require('src.mission')
 local Inspector=require('src.atlas_inspector')
 local screen='menu';local game=nil;local paused=false
 local scale,ox,oy=1,0,0
@@ -34,7 +35,15 @@ local function cameraClamp()
   game.camera.y=math.max(0,math.min(game.camera.y,game.h*16-230))
 end
 local function start(mode,level)
-  game=World.new(mode,level or 1)
+  local map
+  if mode=='scenario' and level==2 then
+    local err
+    map,err=Mission.load('training_crossroads')
+    if not map then print('Erro ao carregar mapa experimental: '..tostring(err));return end
+  end
+  local newGame,err=World.new(mode,level or 1,nil,map)
+  if not newGame then print('Falha ao iniciar mapa: '..tostring(err));return end
+  game=newGame
   paused=false;screen='game';cameraClamp()
 end
 local function currentSelectedBuilding()
@@ -47,6 +56,7 @@ local function act(id)
   if id=='menu' or id=='back_to_menu' then screen='menu';paused=false;game=nil
   elseif id=='campaign' then start('campaign',1)
   elseif id=='scenario' then start('scenario',1)
+  elseif id=='training_map' then start('scenario',2)
   elseif id=='help' then screen='help'
   elseif id=='load' then
     local loaded,err=Save.read(World)
