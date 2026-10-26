@@ -13,6 +13,15 @@ love={
 package.path='./?.lua;./?/init.lua;'..package.path
 require('main')
 love.load();love.draw()
+-- F2 also works on the menu (there is no World instance yet).
+local Inspector=require('src.atlas_inspector')
+love.keypressed('f2')
+assert(Inspector.active,'inspector did not open from the menu')
+love.mousemoved(200,200)
+assert(Inspector.mouseX==100 and Inspector.mouseY==100,'menu pointer not sent to inspector')
+love.mousereleased(200,200,1)
+love.keypressed('f2')
+assert(not Inspector.active,'inspector did not close from the menu')
 -- Botao 'campanha' do menu, em coordenadas fisicas 2x.
 love.mousepressed(160,290,1);love.mousereleased(160,290,1)
 for i=1,40 do love.update(.05) end
