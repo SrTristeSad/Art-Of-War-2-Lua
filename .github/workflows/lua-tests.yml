@@ -24,6 +24,7 @@ jobs:
           lua5.3 tests/sequence_regression.lua
           lua5.3 tests/animation_timing_regression.lua
           lua5.3 tests/inspector_draft_regression.lua
+          lua5.3 tests/candidate_inspector_regression.lua
       - name: Install Pillow for atlas export tests
         run: python3 -m pip install pillow
       - name: Verify atlas crop and sequence preview export
@@ -31,6 +32,8 @@ jobs:
           python3 -m unittest discover -s tests -p 'export_atlas_regression.py'
           python3 -m unittest discover -s tests -p 'provenance_regression.py'
           python3 -m unittest discover -s tests -p 'sequence_preview_regression.py'
+          python3 -m unittest discover -s tests -p 'atlas_candidates_regression.py'
+          python3 tools/detect_sprite_candidates.py --verify
           python3 tools/verify_sprite_provenance.py
       - name: Verify source atlas fingerprints
         run: python3 tools/inventory_atlas.py --verify

@@ -22,7 +22,7 @@ function Regions.rectangle(ax,ay,bx,by)
 end
 
 function Regions.validate(atlas,rect,imageW,imageH)
-  if type(atlas)~='string' or not atlas:match('^[%w_%-]+%.png$') then return false end
+  if type(atlas)~='string' or not atlas:match('^[%w_%.%-]+%.png$') or atlas:find('..',1,true) then return false end
   if type(rect)~='table' then return false end
   for _,k in ipairs({'x','y','w','h'}) do
     local v=rect[k]

@@ -63,3 +63,13 @@ Durações e estados visuais não alteram cadência de tiros, dano ou movimento.
 - O renderer suporta recortes de qualquer um dos PNGs, mas a disposição exata das sequências permanece desconhecida.
 - `assets/animations/<sprite>/<state>_NN.png` permanece como fallback opcional legado, não como prova de fidelidade.
 - Testes em LÖVE real, Windows e Android ainda necessários; testes atuais são executados com mock e biblioteca Lua local.
+
+## Etapa v0.9 — regiões sugeridas por análise de transparência
+
+`python tools/detect_sprite_candidates.py` examina os 67 PNGs **sem modificá-los**, localizando regiões contíguas de pixels com alfa não zero (vizinhança 8-conectada). O resultado é determinístico em `docs/ATLAS_CANDIDATOS.csv` e `src/atlas_candidates.lua`, limitado a 256 componentes por atlas, com filtro mínimo de área para reduzir ruído.
+
+No inspetor `F2`, pressione **B** para mostrar/ocultar as regiões candidatas em laranja. **N** seleciona o próximo candidato no atlas atual; **M** seleciona o anterior. Ao selecionar um candidato, **G** o adiciona à sequência de estudo e **E** exporta CSV como `unverified`. Os recortes verdes de `V` continuam sendo somente os 21 PNGs com correspondência de pixels verificada.
+
+**Limitação estrutural:** uma sprite pode ser dividida em muitas ilhas se seus pixels não se tocam; duas sprites podem ser unidas em uma região se os pixels se encostam. Portanto **nenhuma das sugestões identifica automaticamente um frame, direção ou unidade original**. Não são ativadas no renderer do jogo e continuam exigindo observação do J2ME/JAR. Revalidar a base com `python tools/detect_sprite_candidates.py --verify`.
+
+O motor também preserva visualmente uma animação `attack` verificada até o final do tempo total (`durations_ms` ou FPS uniforme), sem prolongar o cooldown de tiro nem alterar dano. Na ausência de animação verificada, conserva o indicador visual provisório de 0,15 s. Torres podem entrar no estado visual `attack`; QGs e edifícios de produção continuam inativos. Isso **não certifica** as animações do Art of War 2 original.

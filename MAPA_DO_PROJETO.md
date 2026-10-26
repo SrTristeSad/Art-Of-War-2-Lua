@@ -135,3 +135,12 @@ As correções abaixo são **engenharia de robustez**, não equivalência compro
 - Regressão dedicada de transições, sequência não uniforme, estados ao carregar
   saves e compatibilidade do núcleo. **Sem animação J2ME certificada** e sem
   execução gráfica real ainda; fidelidade 1:1 permanece pendente do JAR.
+
+## Marco v0.9 — detecção assistida de quadros (não-canônica)
+
+- O inventário dos **67 PNGs originais** pode gerar regiões por componentes 8-conectados de pixels visíveis, com limites seguros por atlas. Nesta versão, foram geradas **178 regiões candidatas**; cada uma permanece `unverified`. São hipóteses de recortes, não quadros de animação comprovados.
+- `src/atlas_candidates.lua` alimenta o inspetor `F2`. `B` alterna sobreposição laranja; `N/M` percorrem propostas no atlas; `G` adiciona à prévia e `E` exporta CSV para estudo. As 21 correspondências de pixels confirmadas continuam separadas em verde.
+- `src/art.lua` fornece apenas a duração de sequências marcadas e validadas como `verified`. O relógio de ataque em `src/animation.lua` não encerra antes de uma sequência verificada terminar; ataques de torres também podem ser animados. Essas operações são **exclusivamente visuais** e não alteram IA, danos, economia ou regras.
+- CI ampliado com testes da detecção, exportação determinística, limites das regiões, interface do inspetor e temporização de ataque.
+
+**Estado do 1:1:** ainda NÃO concluído. Campanhas, controle de unidades, FPS, IA, missões e animações seguem sem certificação contra o JAR original. Apenas ferramentas de investigação e robustez do protótipo avançaram.

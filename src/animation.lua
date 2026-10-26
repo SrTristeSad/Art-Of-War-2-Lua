@@ -4,20 +4,28 @@
 local Animation={}
 
 function Animation.state(entity)
-  if entity.building then return 'idle' end
-  if (entity.firePulse or 0)>0 then return 'attack' end
+  if entity.building and entity.kind~='turret' then return 'idle' end
+  if (entity.attackVisualLeft or 0)>0 or (entity.firePulse or 0)>0 then return 'attack' end
   -- Orders do not prove movement: a blocked unit may be stationary forever.
   if entity.moving then return 'walk' end
   return 'idle'
 end
 
-function Animation.advance(entity,dt,attackStarted)
+function Animation.advance(entity,dt,attackStarted,attackDuration)
+  -- Preserve the entire validated attack clip when it outlasts firePulse.
+  -- Without original timing, preserve the existing 0.15s placeholder only.
+  local delta=math.max(0,tonumber(dt) or 0)
+  if attackStarted then
+    entity.attackVisualLeft=math.max(.15,tonumber(attackDuration) or .15)
+  else
+    entity.attackVisualLeft=math.max(0,(entity.attackVisualLeft or 0)-delta)
+  end
   local state=Animation.state(entity)
   if entity.animationState~=state or attackStarted then
     entity.animationState=state
     entity.animationTime=0
   else
-    entity.animationTime=(entity.animationTime or 0)+math.max(0,dt or 0)
+    entity.animationTime=(entity.animationTime or 0)+delta
   end
   return state,entity.animationTime
 end

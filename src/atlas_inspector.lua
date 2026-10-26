@@ -3,7 +3,8 @@
 local Regions=require('src.atlas_regions')
 local Catalog=require('src.atlas_catalog')
 local Draft=require('src.sequence_draft')
-local Inspector={active=false,index=1,zoom=1,files={},cache={},mouseX=nil,mouseY=nil,dragging=nil,selection=nil,message=nil,showVerified=true,previewFrames={},previewTime=0,previewPlaying=false,previewFPS=8,exportCount=0}
+local Candidates=require('src.atlas_candidates')
+local Inspector={active=false,index=1,zoom=1,files={},cache={},mouseX=nil,mouseY=nil,dragging=nil,selection=nil,message=nil,showVerified=true,showCandidates=false,candidateIndex=0,previewFrames={},previewTime=0,previewPlaying=false,previewFPS=8,exportCount=0}
 local DIR='assets/original/'
 local AREA={x=10,y=43,w=220,h=222}
 local function normalizedFilename(a)
@@ -19,7 +20,7 @@ local function order(a,b)
 end
 function Inspector.initialize()
   Inspector.files={};Inspector.cache={};Inspector.index=1;Inspector.zoom=1
-  Inspector.selection=nil;Inspector.message=nil;Inspector.dragging=nil
+  Inspector.selection=nil;Inspector.message=nil;Inspector.dragging=nil;Inspector.candidateIndex=0
   Inspector.previewFrames={};Inspector.previewTime=0;Inspector.previewPlaying=false;Inspector.previewFPS=8
   local fs=love.filesystem
   local entries=(fs and fs.getDirectoryItems and fs.getDirectoryItems(DIR)) or {}
@@ -49,7 +50,18 @@ end
 function Inspector.step(shift)
   if #Inspector.files==0 then return end
   Inspector.index=((Inspector.index-1+shift)%#Inspector.files)+1
-  Inspector.zoom=1;Inspector.dragging=nil;Inspector.selection=nil;Inspector.message=nil
+  Inspector.zoom=1;Inspector.dragging=nil;Inspector.selection=nil;Inspector.message=nil;Inspector.candidateIndex=0
+end
+-- Suggested alpha components are unverified. They never become active sprites.
+function Inspector.nextCandidate(direction)
+  local boxes=Candidates[Inspector.selectedFile()] or {}
+  if #boxes==0 then Inspector.message='Sem candidatos neste atlas';return false end
+  local nextIndex=((Inspector.candidateIndex-1+(direction or 1))%#boxes)+1
+  Inspector.candidateIndex=nextIndex
+  local box=boxes[nextIndex]
+  Inspector.selection={x=box.x,y=box.y,w=box.w,h=box.h}
+  Inspector.message=string.format('Candidato %d/%d (nao verificado)',nextIndex,#boxes)
+  return true
 end
 function Inspector.changeZoom(delta)
   Inspector.zoom=math.max(0.5,math.min(8,Inspector.zoom*(delta>0 and 1.25 or .8)))
@@ -145,6 +157,9 @@ function Inspector.keypressed(key)
   elseif key=='home' then Inspector.index=1;Inspector.zoom=1;Inspector.selection=nil;Inspector.dragging=nil
   elseif key=='end' then Inspector.index=math.max(1,#Inspector.files);Inspector.zoom=1;Inspector.selection=nil;Inspector.dragging=nil
   elseif key=='v' then Inspector.showVerified=not Inspector.showVerified
+  elseif key=='b' then Inspector.showCandidates=not Inspector.showCandidates
+  elseif key=='n' then Inspector.nextCandidate(1)
+  elseif key=='m' then Inspector.nextCandidate(-1)
   elseif key=='g' then Inspector.addFrame()
   elseif key=='p' then Inspector.previewPlaying=not Inspector.previewPlaying;Inspector.previewTime=0
   elseif key=='f' then Inspector.previewFPS=Inspector.previewFPS%16+1;Inspector.previewTime=0
@@ -170,6 +185,7 @@ function Inspector.mousepressed(x,y,button)
       if px then
         Inspector.dragging={x=px,y=py}
         Inspector.selection=Regions.rectangle(px,py,px,py)
+        Inspector.candidateIndex=0
         Inspector.message=nil
       end
     end
@@ -225,6 +241,15 @@ function Inspector.draw()
         end
       end
     end
+    -- Orange candidate boxes represent connected opaque components only.
+    if Inspector.showCandidates then
+      for i,candidate in ipairs(Candidates[file] or {}) do
+        local focused=i==Inspector.candidateIndex
+        g.setColor(1,focused and .9 or .58,.15,focused and 1 or .65)
+        g.rectangle('line',x+candidate.x*scale,y+candidate.y*scale,
+          candidate.w*scale,candidate.h*scale)
+      end
+    end
     if Inspector.selection then
       local r=Inspector.selection
       g.setColor(.1,.9,.98,.20)
@@ -277,7 +302,7 @@ function Inspector.draw()
   write('< ANT',21,285);write('ZOOM 1x',96,285);write('PROX >',174,285)
   local r=Inspector.selection
   local info=r and string.format('%d,%d  %dx%d  S:salvar C:limpar',r.x,r.y,r.w,r.h)
-    or (Inspector.pixelX and ('Pixel: '..Inspector.pixelX..', '..Inspector.pixelY) or 'Setas: PNG  |  roda: zoom')
+    or (Inspector.pixelX and ('Pixel: '..Inspector.pixelX..', '..Inspector.pixelY) or 'Setas:PNG N/M:candidato B:caixas')
   if not r and Inspector.pixelX then
     for name,record in pairs(Catalog) do
       if record.atlas==file and Inspector.pixelX>=record.x and Inspector.pixelY>=record.y
@@ -296,8 +321,8 @@ function Inspector.draw()
   else
     local count=0
     for _,entry in pairs(Catalog) do if entry.atlas==file then count=count+1 end end
-    write(string.format('V: %d recortes pixel-exact %s',count,
-      Inspector.showVerified and '[on]' or '[off]'),8,267)
+    write(string.format('V:%d exatos B:%d candidatos %s',count,#(Candidates[file] or {}),
+      Inspector.showCandidates and '[on]' or '[off]'),8,267)
   end
   g.setColor(1,1,1,1)
 end

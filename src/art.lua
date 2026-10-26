@@ -132,6 +132,18 @@ function Art.draw(name,x,y,w,h,angle,alpha)
   end
 end
 
+-- Duration is used only to avoid cutting off verified attack animations.
+-- No sequence is inferred from the atlas or from unverified CSV proposals.
+function Art.sequenceDuration(name,state)
+  local sequence=(Art.atlasAnimations[name] or {})[state]
+  if not sequence or not sequence.frames or #sequence.frames==0 then return nil end
+  if sequence.durations_ms then
+    local total=0
+    for _,ms in ipairs(sequence.durations_ms) do total=total+ms end
+    return total/1000
+  end
+  return #sequence.frames/sequence.fps
+end
 function Art.hasSequence(name,state)
   return not not ((Art.atlasAnimations[name] or {})[state])
 end

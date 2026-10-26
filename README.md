@@ -128,3 +128,11 @@ A v0.7 **não representa reconstrução 1:1 concluída**, e os frames de caminha
 **Não foram certificados novos quadros do jogo Java nesta versão.** A tabela
 `src/animation_sequences.lua` permanece vazia até evidência do executável.
 Testes em um LÖVE gráfico real e no Android continuam pendentes.
+
+## Atualização v0.9 — assistência à pesquisa de quadros (não-canônica)
+
+`F2` abre o inspetor; `B` alterna **caixas laranja de componentes opacos sugeridos**, `N/M` percorrem essas regiões, `G` adiciona à sequência de prévia, e `E` exporta uma sequência `unverified`. `V` continua a alternar o catálogo verde de 21 recortes pixel-exact.
+
+Foram localizadas 178 regiões candidatas por transparência, catalogadas em `docs/ATLAS_CANDIDATOS.csv` com origem em `src/atlas_candidates.lua`. A detecção **não comprova quadros de animação** e não integra automaticamente nada às unidades. Para reconstruir/revalidar: `python tools/detect_sprite_candidates.py --verify` (requer Pillow).
+
+Corrigida a duração do estado visual de ataque: uma animação `verified` não é interrompida pelo término do flash de 0,15 s; isso não muda a cadência de ataques. Nenhuma animação original foi certificada nesta etapa. A validação no runtime LÖVE real continua pendente.

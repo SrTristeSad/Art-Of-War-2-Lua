@@ -407,7 +407,9 @@ function World:_tick(dt)
           end
         end
       end
-      Animation.advance(e,dt,firedThisTick)
+      -- Rendering-only timing: the frame index never affects attack cadence.
+      local sprite=(e.team==1 and 'blue_' or 'red_')..e.kind
+      Animation.advance(e,dt,firedThisTick,Art.sequenceDuration(sprite,'attack'))
     end
   end
 end

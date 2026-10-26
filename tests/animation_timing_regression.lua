@@ -48,6 +48,8 @@ state,time=Animation.advance(e,.033,true)
 assert(state=='attack' and time==0,'new attack event must retrigger animation')
 e.firePulse=0;e.moving=false
 state,time=Animation.advance(e,.033)
+assert(state=='attack', 'visual attack retains short flash timing')
+for i=1,4 do state,time=Animation.advance(e,.033) end
 assert(state=='idle' and time==0)
 local world=World.new('scenario',1,553)
 local first
@@ -67,4 +69,19 @@ local loaded=assert(Save.read(World))
 for _,unit in ipairs(loaded.entities) do
   assert(unit.animationTime==0 and unit.animationState=='idle' and not unit.moving)
 end
+-- Attack's visual lifespan follows verified clip length, not a short flash.
+local firing={kind='infantry',building=false,moving=false,firePulse=.15}
+assert(Animation.advance(firing,.033,true,.45)=='attack')
+firing.firePulse=0
+for i=1,10 do assert(Animation.advance(firing,.033,false)=='attack') end
+assert(Animation.advance(firing,.15,false)=='idle')
+-- Turrets are buildings that can visibly fire; headquarters remain idle.
+local turret={kind='turret',building=true,firePulse=.15}
+assert(Animation.state(turret)=='attack')
+assert(Animation.state({kind='hq',building=true,firePulse=.15})=='idle')
+-- The duration calculator works for verified in-memory sequences.
+local Art=require('src.art')
+Art.atlasAnimations={blue_infantry={attack={frames={a,b,c},fps=10,durations_ms={80,220,100}}}}
+assert(math.abs(Art.sequenceDuration('blue_infantry','attack')-.4)<1e-7)
+assert(Art.sequenceDuration('red_infantry','attack')==nil)
 print('ANIMATION TIMING REGRESSIONS PASSED')
