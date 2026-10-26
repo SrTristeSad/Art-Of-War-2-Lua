@@ -2,7 +2,7 @@
 
 > **OBJETIVO PRINCIPAL: reconstruir o jogo original com fidelidade 1:1**, substituindo o motor Java ME pelo **Lua + LÖVE**, sem transformar a experiência em outro jogo.
 >
-> **ESTADO ATUAL: protótipo técnico v0.13, NÃO É 1:1.** Os sistemas provisórios são ferramentas de desenvolvimento e serão substituídos à medida que o comportamento original for verificado.
+> **ESTADO ATUAL: protótipo técnico v0.15, NÃO É 1:1.** Os sistemas provisórios são ferramentas de desenvolvimento e serão substituídos à medida que o comportamento original for verificado.
 
 ## Princípio do projeto (não negociável)
 
@@ -225,3 +225,13 @@ A execução gráfica no LÖVE Windows/Android continua pendente.
 
 Execute `lua5.3 tests/traffic_clearance_regression.lua` (ou `texlua`)
 para repetir os testes específicos desta etapa.
+
+
+## Etapa v0.15 — slots de formação por tamanho físico
+
+- `Movement.formationSlots` reserva posições de destino por **raio real do tipo de tropa**: o tanque não recebe um espaço que só serve a infantaria. Para evitar filas artificialmente irregulares, atribui destinos às unidades maiores primeiro e usa desempate determinístico por ID e posição.
+- São respeitados o contorno das rochas/edifícios, a borda do mapa, outras unidades **não selecionadas** e os slots já reservados. Unidades selecionadas podem reorganizar suas posições; se a área estiver totalmente ocupada, nenhuma posição impossível é emitida.
+- Desvio local que efetivamente aproxima uma unidade do próximo waypoint **não dispara mais replanejamento desnecessário**. Deslocamento lateral sem progresso continua sendo monitorado.
+- `tests/squad_formation_regression.lua` confirma espaçamento de tropas de tamanhos diferentes, determinismo, bordas e detecção de progresso, e foi incluído no GitHub Actions.
+
+**Limites:** a política de formação permanece provisória, não foi extraída do JAR e não resolve todos os impasses físicos em corredores de mão única. A execução real no LÖVE/Android continua sem validação.

@@ -216,3 +216,10 @@ J2ME original, reproduzir seu fluxo real de missões, calibrar física,
 controles/tempos, evitar bloqueios prolongados em vias de mão única, testar
 renderização em LÖVE real no Windows e Android. A etapa não estabelece
 fidelidade 1:1 nem afirma conhecer a lógica da IA original.
+
+
+## Etapa v0.15 — gestão de formação para esquadrões mistos
+
+**Entregue:** a distribuição dos destinos de grupo passou a validar o raio físico de cada soldado ou tanque, impedir sobreposição de vagas, preservar espaço livre perto de tropas não selecionadas e rejeitar posições que invadam obstáculos ou bordas. O recálculo do caminho agora distingue um desvio útil de um movimento lateral sem progresso, reduzindo recomputações inúteis. Há testes determinísticos e automação de regressão.
+
+**Pendente para o 1:1:** comportamento verdadeiro das formações no JAR original, negociação de prioridade e desobstrução de corredores estreitos sem área de ultrapassagem, execução real no LÖVE, mapas e campanhas autênticas. Não confundir a melhoria técnica de formação com a mecânica comprovada do jogo Java.

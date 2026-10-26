@@ -101,6 +101,68 @@ function Movement.advance(world,entity,tx,ty,step)
   return false, false
 end
 
+-- Reserve distinct, physically walkable squad destinations. A grid tile that is
+-- free for infantry is not necessarily free for a tank next to a wall. Reserve
+-- larger bodies first; all ties are deterministic (unit id / grid position).
+-- This changes ONLY provisional formation placement, never J2ME reference data.
+function Movement.formationSlots(world,units,x,y,selected)
+  local available={}
+  for gy=1,world.h do for gx=1,world.w do
+    if not blockedTile(world,gx,gy) then
+      local px,py=gx*TILE,gy*TILE
+      available[#available+1]={x=px,y=py,
+        clickDistance=(px-x)^2+(py-y)^2}
+    end
+  end end
+  table.sort(available,function(a,b)
+    if a.clickDistance~=b.clickDistance then return a.clickDistance<b.clickDistance end
+    if a.y~=b.y then return a.y<b.y end
+    return a.x<b.x
+  end)
+  local largestFirst={}
+  for i,unit in ipairs(units) do largestFirst[i]=unit end
+  table.sort(largestFirst,function(a,b)
+    if radius(a)~=radius(b) then return radius(a)>radius(b) end
+    return a.id<b.id
+  end)
+  local reserved,goals={},{}
+  for _,unit in ipairs(largestFirst) do
+    local r=radius(unit)
+    local chosen,bestDistance=nil,math.huge
+    for _,spot in ipairs(available) do
+      if solidClear(world,spot.x,spot.y,r) then
+        local free=true
+        for _,other in ipairs(world.entities) do
+          if other.alive and not other.building and not selected[other.id] then
+            local combined=r+radius(other)+0.35
+            if (spot.x-other.x)^2+(spot.y-other.y)^2<combined*combined then
+              free=false;break
+            end
+          end
+        end
+        if free then for _,taken in ipairs(reserved) do
+          local combined=r+taken.radius+0.35
+          if (spot.x-taken.x)^2+(spot.y-taken.y)^2<combined*combined then
+            free=false;break
+          end
+        end end
+        if free then
+          -- Prioritize proximity to the order, then travel distance from
+          -- this particular unit; never change results with frame timing.
+          local score=spot.clickDistance*0.75+
+            (spot.x-unit.x)^2+(spot.y-unit.y)^2
+          if score<bestDistance then chosen=spot;bestDistance=score end
+        end
+      end
+    end
+    if chosen then
+      goals[unit.id]={x=chosen.x,y=chosen.y}
+      reserved[#reserved+1]={x=chosen.x,y=chosen.y,radius=r}
+    end
+  end
+  return goals
+end
+
 -- Congestion-aware replanning only when local avoidance has been blocked
 -- repeatedly. Do not change the permanent blocked grid or the saves.
 function Movement.trafficMap(world,entity)

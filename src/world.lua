@@ -140,45 +140,13 @@ function World:moveSelected(x,y)
   local target=self:entityAt(x,y)
   if target and target.team==1 then target=nil end
   self:refreshBlocked()
-  local destinations={}
-  if not target then
-    -- Give each selected soldier a separate cell near the click. Do not
-    -- stack an entire squad onto the same exact world coordinate.
-    local cx=math.floor(x/SIZE+.5);local cy=math.floor(y/SIZE+.5)
-    for radius=0,math.max(self.w,self.h) do
-      for dy=-radius,radius do for dx=-radius,radius do
-        if math.max(math.abs(dx),math.abs(dy))==radius then
-          local gx,gy=cx+dx,cy+dy
-          if gx>=1 and gy>=1 and gx<=self.w and gy<=self.h
-             and not self.blocked[gy*self.w+gx] then
-            -- Avoid destinations already occupied by unselected troops.
-            -- Selected units may swap positions while the formation rearranges.
-            local free=true
-            for _,other in ipairs(self.entities) do
-              if other.alive and not other.building and not self.selected[other.id] then
-                local r=Movement.radius(other)+7.3
-                if (gx*SIZE-other.x)^2+(gy*SIZE-other.y)^2<r*r then
-                  free=false;break
-                end
-              end
-            end
-            if free then destinations[#destinations+1]={x=gx*SIZE,y=gy*SIZE} end
-          end
-        end
-      end end
-      if #destinations>=#units then break end
-    end
-  end
+  local destinations=target and {} or Movement.formationSlots(self,units,x,y,self.selected)
   for _,e in ipairs(units) do
     local goal={x=x,y=y,target=target and target.id or nil,manualAttack=target~=nil}
-    if not target and #destinations>0 then
-      local closest=1;local distanceSquared=math.huge
-      for i,spot in ipairs(destinations) do
-        local d=(spot.x-e.x)^2+(spot.y-e.y)^2
-        if d<distanceSquared then distanceSquared=d;closest=i end
-      end
-      local spot=table.remove(destinations,closest)
-      goal.x,goal.y=spot.x,spot.y
+    if not target then
+      local spot=destinations[e.id]
+      -- Do not issue an impossible formation slot if the ground is full.
+      if spot then goal.x,goal.y=spot.x,spot.y else goal=nil end
     end
     e.order=goal;e.path=nil;e.pathTime=0;e.blockedTime=0;e.steerTime=0;e.avoidCongestion=false
   end
@@ -319,7 +287,12 @@ function World:navigate(e,x,y,dt)
     -- A unit that keeps sidestepping but never gets nearer to a grid
     -- waypoint is in traffic congestion, even though it is technically
     -- changing coordinates. Request a fresh route around occupied tiles.
-    e.steerTime=steered and ((e.steerTime or 0)+dt) or 0
+    local remaining=distance(e.x,e.y,tx,ty)
+    local progress=d-remaining
+    -- Sidestepping toward a waypoint is useful; do not repeatedly erase
+    -- that route. Accumulate time only for lateral/no-progress movement.
+    e.steerTime=(steered and progress<math.max(0.05,step*0.12))
+      and ((e.steerTime or 0)+dt) or 0
     e.blockedTime=0
     if e.steerTime>=0.4 then
       e.path=nil;e.pathTime=0;e.avoidCongestion=true;e.steerTime=0
