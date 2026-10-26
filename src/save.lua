@@ -29,7 +29,7 @@ function Save.write(world)
   for _,e in ipairs(world.entities) do
     local entity={}
     for k,v in pairs(e) do
-      if k~='path' and k~='pathTime' and k~='firePulse' and k~='hitPulse' and k~='animTime' then entity[k]=v end
+      if k~='path' and k~='pathTime' and k~='firePulse' and k~='hitPulse' and k~='animTime' and k~='animationTime' and k~='animationState' and k~='moving' then entity[k]=v end
     end
     copy.entities[#copy.entities+1]=entity
   end
@@ -52,6 +52,8 @@ function Save.read(World)
   world.effects={};world.preview=nil
   for _,e in ipairs(world.entities) do
     e.path=nil;e.pathTime=0
+    e.moving=false;e.animationState='idle';e.animationTime=0;e.animTime=0
+    e.firePulse=0;e.hitPulse=0
   end
   world:refreshBlocked();world:toast('Partida carregada.')
   return world

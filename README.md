@@ -2,7 +2,7 @@
 
 > **OBJETIVO PRINCIPAL: reconstruir o jogo original com fidelidade 1:1**, substituindo o motor Java ME pelo **Lua + LÖVE**, sem transformar a experiência em outro jogo.
 >
-> **ESTADO ATUAL: protótipo técnico v0.7, NÃO É 1:1.** Os sistemas provisórios são ferramentas de desenvolvimento e serão substituídos à medida que o comportamento original for verificado.
+> **ESTADO ATUAL: protótipo técnico v0.8, NÃO É 1:1.** Os sistemas provisórios são ferramentas de desenvolvimento e serão substituídos à medida que o comportamento original for verificado.
 
 ## Princípio do projeto (não negociável)
 
@@ -108,3 +108,23 @@ O arquivo `src/animation_sequences.lua` é um manifesto de quadros por atlas (at
 [Procedimento de captura e conferência](docs/ANIMACOES_CONFERENCIA.md) descreve os atalhos, exportação, geração das tiras de quadros e critérios para adicionar animações reais. Para uma prévia exportada, use `python tools/preview_atlas_sequences.py CAMINHO/atlas_sequences_candidates.csv` (Pillow).
 
 A v0.7 **não representa reconstrução 1:1 concluída**, e os frames de caminhada e ataque originais ainda não foram verificados. Em Windows e Android, a aparência precisa ser conferida no runtime LÖVE real.
+
+
+## Atualização v0.8 — relógios visuais por estado e temporização por quadro
+
+- Caminhada somente quando a unidade **realmente mudou de posição**;
+  uma ordem bloqueada não dispara a animação de movimento.
+- A sequência inicia no **primeiro quadro** ao entrar em `walk` ou `attack`;
+  um disparo novo também reinicia a fase, sem depender do tempo total da missão.
+- Manifestos `verified` admitem `durations_ms` opcionais para reproduzir os
+  tempos de cada frame obtidos de fontes originais, além de FPS uniforme.
+- `idle`, `walk` e `attack` visuais **não** alteram velocidades de movimento,
+  cadência, dano, IA, sorteios ou resultados do motor de combate.
+- Campos visuais são descartados nos saves e reiniciados ao carregar;
+  partidas de versões anteriores continuam compatíveis.
+- Verificação: `lua tests/animation_timing_regression.lua`; todos os demais
+  testes de regressão também permanecem obrigatórios.
+
+**Não foram certificados novos quadros do jogo Java nesta versão.** A tabela
+`src/animation_sequences.lua` permanece vazia até evidência do executável.
+Testes em um LÖVE gráfico real e no Android continuam pendentes.

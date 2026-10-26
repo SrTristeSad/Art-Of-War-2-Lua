@@ -119,3 +119,19 @@ As correções abaixo são **engenharia de robustez**, não equivalência compro
 - Testes novos para temporização, bounds, fallback e CSV; CI do GitHub Actions corrigido para executar os três testes Python separadamente.
 
 **Resultado de fidelidade:** infraestrutura de investigação e reprodução de sequências aprimorada; **nenhuma animação J2ME foi certificada**. Continuamos dependentes do JAR original e da comparação quadro a quadro com execução de referência.
+
+
+## Marco v0.8 — temporização de animações sem suposições sobre o Java
+
+- Cada entidade tem estado e tempo visuais próprios, reiniciados na mudança
+  entre repouso/movimento/ataque ou quando um novo disparo é efetuado.
+- Somente deslocamento real seleciona `walk`; tentativas bloqueadas deixam
+  o sprite em `idle` em vez de simular caminhada no lugar.
+- Manifestos de sequências aceitam durações inteiras em milissegundos por
+  quadro (`durations_ms`); reproduzem quadros em loop ou mantêm o último em
+  sequências sem loop. FPS uniforme continua suportado.
+- Timers, estado visual e indicador de movimento são transitórios:
+  nunca entram nos saves nem modificam regras de combate ou RNG.
+- Regressão dedicada de transições, sequência não uniforme, estados ao carregar
+  saves e compatibilidade do núcleo. **Sem animação J2ME certificada** e sem
+  execução gráfica real ainda; fidelidade 1:1 permanece pendente do JAR.

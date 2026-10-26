@@ -39,7 +39,8 @@ assert(Anim.frame(0,4,10)==1 and Anim.frame(.1,4,10)==2 and
  Anim.frame(.4,4,10)==1,'animation timeline has incorrect frame order')
 assert(Anim.state({building=true})=='idle')
 assert(Anim.state({building=false,firePulse=.1})=='attack')
-assert(Anim.state({building=false,order={x=1,y=1}})=='walk')
+assert(Anim.state({building=false,order={x=1,y=1}})=='idle', 'an order without actual movement is idle')
+assert(Anim.state({building=false,moving=true})=='walk')
 
 local world=World.new('scenario',1,2468)
 world:effect('order',100,100,.5)
@@ -71,7 +72,8 @@ love.filesystem.write=function(_,value) saved=value;return true end
 love.filesystem.read=function() return saved end
 love.filesystem.getInfo=function(path) if path=='save.lua' then return saved and {} or nil end end
 assert(Save.write(world))
-assert(not saved:find('firePulse',1,true) and not saved:find('animTime',1,true),
+assert(not saved:find('firePulse',1,true) and not saved:find('animTime',1,true)
+  and not saved:find('animationTime',1,true) and not saved:find('animationState',1,true),
   'transient animation state was persisted')
 local restored=assert(Save.read(World))
 assert(#restored.effects==0 and restored.preview==nil,'visual state restored from save')

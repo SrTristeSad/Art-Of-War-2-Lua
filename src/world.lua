@@ -95,7 +95,7 @@ function World:add(kind,team,x,y)
   local b=kind=='hq' or kind=='barracks' or kind=='factory' or kind=='turret'
   local e={id=self.nextId,kind=kind,team=team,x=x,y=y,hp=st.hp,maxhp=st.hp,
     building=b,alive=true,cooldown=0,queue=0,production=0,angle=0,order=nil,path=nil,
-    animTime=0,firePulse=0,hitPulse=0}
+    animTime=0,animationTime=0,animationState='idle',moving=false,firePulse=0,hitPulse=0}
   self.entities[#self.entities+1]=e
   if b then self:refreshBlocked() end
   return e
@@ -281,6 +281,7 @@ function World:navigate(e,x,y,dt)
     e.path=nil;e.pathTime=0;return false
   end
   e.angle=(math.atan2 and math.atan2(ty-e.y,tx-e.x)) or math.atan(ty-e.y,tx-e.x)
+  e.moving=true
   e.x,e.y=nx,ny
   return true
 end
@@ -352,6 +353,8 @@ function World:_tick(dt)
     if e.alive then
       e.cooldown=math.max(0,e.cooldown-dt)
       e.animTime=(e.animTime or 0)+dt
+      e.moving=false
+      local firedThisTick=false
       e.firePulse=math.max(0,(e.firePulse or 0)-dt)
       e.hitPulse=math.max(0,(e.hitPulse or 0)-dt)
       if e.building and e.queue>0 then
@@ -371,6 +374,7 @@ function World:_tick(dt)
         if enemy and e.cooldown==0 then
           enemy.hp=enemy.hp-st.dmg;e.cooldown=st.cooldown
           e.firePulse=0.15
+          firedThisTick=true
           if not e.building then
             e.angle=(math.atan2 and math.atan2(enemy.y-e.y,enemy.x-e.x))
               or math.atan(enemy.y-e.y,enemy.x-e.x)
@@ -403,6 +407,7 @@ function World:_tick(dt)
           end
         end
       end
+      Animation.advance(e,dt,firedThisTick)
     end
   end
 end
@@ -456,13 +461,14 @@ function World:draw(camx,camy,viewH)
         love.graphics.circle('line',sx,sy,size*.6)
         love.graphics.setColor(1,1,1,1)
       end
-      local state=Animation.state(e)
+      local state=e.animationState or Animation.state(e)
+      local visualTime=e.animationTime or e.animTime or 0
       local artName=(e.team==1 and 'blue_' or 'red_')..e.kind
       local offset=(e.building or Art.hasSequence(artName,state)) and 0
-        or Animation.offset(state,e.animTime or 0)
+        or Animation.offset(state,visualTime)
       local opacity=(e.hitPulse or 0)>0 and .67 or 1
       local rotation=e.building and 0 or e.angle
-      Art.drawEntity(artName,sx,sy+offset,size,size,rotation,opacity,state,e.animTime)
+      Art.drawEntity(artName,sx,sy+offset,size,size,rotation,opacity,state,visualTime)
       if (e.firePulse or 0)>0 then
         love.graphics.setColor(1,.75,.2,math.min(1,e.firePulse/.15))
         love.graphics.circle('fill',sx+math.cos(e.angle)*size*.43,

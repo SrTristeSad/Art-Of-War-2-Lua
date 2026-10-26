@@ -138,14 +138,7 @@ end
 function Art.frameFor(name,state,time,fps)
   local atlas=(Art.atlasAnimations[name] or {})[state or 'idle']
   if atlas then
-    local t=math.max(0,time or 0)
-    local index
-    if atlas.loop then
-      index=require('src.animation').frame(t,#atlas.frames,atlas.fps)
-    else
-      index=math.min(#atlas.frames,math.floor(t*atlas.fps)+1)
-    end
-    return atlas.frames[index]
+    return atlas.frames[Sequence.frameIndex(atlas,time)]
   end
   local frames=(Art.animations[name] or {})[state or 'idle']
   return frames and frames[require('src.animation').frame(time,#frames,fps or 8)] or atlasFrame(name)

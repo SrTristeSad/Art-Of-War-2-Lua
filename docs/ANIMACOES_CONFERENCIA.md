@@ -1,4 +1,4 @@
-# Reconstrução de animações — procedimento de evidência (v0.7)
+# Reconstrução de animações — procedimento de evidência (v0.8)
 
 **Objetivo inalterado:** equivalência 1:1 com Art of War 2: Global Confederation J2ME. O pacote recebido contém atlas PNG com numerosas poses, mas **não** contém a tabela que determina frame, direção, estado ou duração. As sequências criadas neste estágio são somente hipóteses para estudo e comparação; **não integram o jogo automaticamente**.
 
@@ -41,6 +41,19 @@ return {
   }
 }
 ```
+
+Se o JAR demonstrar tempo específico para cada quadro, há um campo opcional
+`durations_ms = {80, 220, 100}` com um valor inteiro, em milissegundos,
+para **cada quadro**. Esse exemplo de durações também é fictício e serve
+somente para mostrar a sintaxe. A velocidade `fps` continua obrigatória
+como valor de referência/fallback; quando `durations_ms` está presente,
+ela tem prioridade para a escolha de quadros. Cada duração deve ser de
+1 a 5.000 ms e a sequência inteira não pode exceder 60.000 ms.
+
+Quando a unidade passa de `idle` para `walk` ou inicia um disparo, o relógio
+local da animação reinicia no primeiro quadro. Uma unidade bloqueada não
+entra automaticamente no estado `walk` apenas por possuir uma ordem.
+Durações e estados visuais não alteram cadência de tiros, dano ou movimento.
 
 **O exemplo é didático e não deve ser ativado como animação original.** O carregador restringe estados/unidades, FPS de 1 a 30, até 64 frames, coordenadas inteiras dentro de cada atlas, e `verification='verified'`; quando qualquer frame está ausente, rejeita a sequência inteira, preservando fallback estático. Quads de animação compartilham a mesma textura do atlas que os sprites estáticos e não são gravados nos saves. A renderização sequencial não muda a lógica da simulação. O manifesto não é carregado de arquivos CSV externos ou executado dinamicamente.
 
