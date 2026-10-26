@@ -26,3 +26,7 @@ tabelas de duracao. Adicionar imagens nao prova fidelidade 1:1.
 
 
 **Nota v0.6:** o catálogo de 21 recortes pixel-exact se refere a imagens estáticas usadas no protótipo, **não** determina quais frames/direções representam idle, walk, attack ou death. As pastas opcionais de frames continuam aguardando reconstrução verificada.
+
+### Atualização v0.7
+
+O pipeline preferido para sequências comprovadas usa recortes `Quad` de `assets/original` por meio do manifesto `src/animation_sequences.lua`, sem duplicar PNGs individuais. Veja `docs/ANIMACOES_CONFERENCIA.md`. O manifesto inicia vazio; nenhuma sequência do original foi autenticada. As pastas deste README continuam suportadas como fallback legado opcional.

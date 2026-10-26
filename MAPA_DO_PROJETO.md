@@ -109,3 +109,13 @@ As correções abaixo são **engenharia de robustez**, não equivalência compro
 - Regressões validam recortes, desenhar rotacionado, transparência através da imagem original, fallback por atlas ausente, catálogo, integridade do material e núcleo.
 
 **Precisão do marco:** a designação `pixel-exact` comprova **somente igualdade dos pixels destes 21 recortes com os PNGs originais recebidos**. Não comprova que sejam os quadros usados em todos os estados do RTS J2ME, nem o timing de animação, nem a interface/missões/IA/regras. Compor a primeira cena do jogo continua provisório. Próxima meta: recuperar classes e a tabela original de animações/direções do JAR, registrar evidências e substituir suposições.
+
+## Marco v0.7 — laboratório de sequências e integração verificada
+
+- O inspetor `F2` captura sequências de até 64 recortes em múltiplos atlas, permite prévia temporal (`G`, `P`, `F`, `E`, `X`) e exporta CSV separado identificado exclusivamente como `unverified`.
+- `tools/preview_atlas_sequences.py` valida o CSV e gera tira de quadros sem alterar os 67 atlas originais. Nomes, coordenadas, numeração e FPS são validados.
+- `src/atlas_sequence.lua` e `src/animation_sequences.lua` introduzem manifesto de animações: só sequências explicitamente confirmadas (`verification='verified'`) são usadas no jogo; manifestos não são executados a partir dos exports do usuário.
+- Em caso de falta de atlas/Quad, os frames da sequência são rejeitados atomicamente e a entidade mantém seu sprite estático. Sem sequência, o jogo continua com os placeholders visuais conhecidos; não há invenção de quadros originais.
+- Testes novos para temporização, bounds, fallback e CSV; CI do GitHub Actions corrigido para executar os três testes Python separadamente.
+
+**Resultado de fidelidade:** infraestrutura de investigação e reprodução de sequências aprimorada; **nenhuma animação J2ME foi certificada**. Continuamos dependentes do JAR original e da comparação quadro a quadro com execução de referência.

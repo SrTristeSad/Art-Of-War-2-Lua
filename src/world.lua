@@ -457,8 +457,9 @@ function World:draw(camx,camy,viewH)
         love.graphics.setColor(1,1,1,1)
       end
       local state=Animation.state(e)
-      local offset=e.building and 0 or Animation.offset(state,e.animTime or 0)
       local artName=(e.team==1 and 'blue_' or 'red_')..e.kind
+      local offset=(e.building or Art.hasSequence(artName,state)) and 0
+        or Animation.offset(state,e.animTime or 0)
       local opacity=(e.hitPulse or 0)>0 and .67 or 1
       local rotation=e.building and 0 or e.angle
       Art.drawEntity(artName,sx,sy+offset,size,size,rotation,opacity,state,e.animTime)

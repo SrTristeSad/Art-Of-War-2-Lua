@@ -2,7 +2,7 @@
 
 > **OBJETIVO PRINCIPAL: reconstruir o jogo original com fidelidade 1:1**, substituindo o motor Java ME pelo **Lua + LÖVE**, sem transformar a experiência em outro jogo.
 >
-> **ESTADO ATUAL: protótipo técnico v0.4, NÃO É 1:1.** Os sistemas provisórios são ferramentas de desenvolvimento e serão substituídos à medida que o comportamento original for verificado.
+> **ESTADO ATUAL: protótipo técnico v0.7, NÃO É 1:1.** Os sistemas provisórios são ferramentas de desenvolvimento e serão substituídos à medida que o comportamento original for verificado.
 
 ## Princípio do projeto (não negociável)
 
@@ -12,7 +12,7 @@ A referência técnica disponível é o descritor **J2ME v1.12.0** (`docs/manife
 
 **Leia o [MAPA_DO_PROJETO.md](MAPA_DO_PROJETO.md)** para ver as fases, as metas de fidelidade e os critérios de conclusão.
 
-## Estado real da v0.4
+## Estado real (base v0.4, com melhorias até v0.7)
 
 **Existe:** inspeção de atlas originais no próprio LÖVE (F2), inventário verificável dos 67 PNGs originais, profundidade correta entre árvores/rochas e unidades; arte de unidades e edifícios sem deformação da proporção original dos recortes PNG; ordem de desenho por profundidade; prévia de construção e feedback visual temporário de deslocamento, ataque e destruição; pipeline para quadros de animação opcionais (ainda não recuperados do JAR). Motor em tick fixo de 30 Hz, navegação em grade sem atravessar paredes, formação de esquadrão, construção com checagem de colisões, saves legados compatíveis com parser restrito, testes de regressão; menu básico, cenário provisório, bases de dois lados, soldados e tanques, treino/construção, economia automática, navegação A*, inimigo simples, minimapa, mouse/teclado/toque, save/load e sprites extraídos fornecidos pelo usuário.
 
@@ -98,3 +98,13 @@ lua tests/atlas_quads_regression.lua
 ```
 
 A prova abrange as imagens recebidas, **não** as classes/frames/campanhas do J2ME, ainda inacessíveis sem o JAR. A interface do protótipo não é a original. Para a versão fiel 1:1 continuam prioritários os arquivos originais completos e comparações em dispositivo.
+
+## Atualização v0.7 — laboratório de animações (não-canônico)
+
+O inspetor `F2` agora permite selecionar recortes e pressionar `G` para guardá-los em uma sequência de estudo. `P` reproduz a prévia, `F` ajusta FPS (1–16), `E` exporta as coordenadas candidatas para CSV e `X` limpa a sequência. O jogo **não** passa a usar automaticamente essas sequências experimentais.
+
+O arquivo `src/animation_sequences.lua` é um manifesto de quadros por atlas (atualmente vazio): somente sequências com evidência externa, marcadas `verified`, podem ser animadas diretamente pelo runtime. A arquitetura suporta `idle`, `walk`, `attack`, `death`, bounds exatos, quad compartilhado por atlas, FPS próprio e fallback para imagens estáticas se um atlas faltar. Os saves e o estado de combate não são alterados.
+
+[Procedimento de captura e conferência](docs/ANIMACOES_CONFERENCIA.md) descreve os atalhos, exportação, geração das tiras de quadros e critérios para adicionar animações reais. Para uma prévia exportada, use `python tools/preview_atlas_sequences.py CAMINHO/atlas_sequences_candidates.csv` (Pillow).
+
+A v0.7 **não representa reconstrução 1:1 concluída**, e os frames de caminhada e ataque originais ainda não foram verificados. Em Windows e Android, a aparência precisa ser conferida no runtime LÖVE real.

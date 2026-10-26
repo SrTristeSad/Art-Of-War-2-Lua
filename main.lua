@@ -72,6 +72,7 @@ function love.load()
 end
 function love.resize() updateScale() end
 function love.update(dt)
+  Inspector.update(dt)
   if screen=='game' and game then
     if not paused and not game.result and not Inspector.active then
       local vx,vy=0,0

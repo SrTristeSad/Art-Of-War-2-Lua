@@ -1,5 +1,7 @@
 local Catalog=require('src.atlas_catalog')
-local Art = { images = {}, animations={},atlasFrames={},atlasImages={},catalog=Catalog }
+local Sequence=require('src.atlas_sequence')
+local SequenceManifest=require('src.animation_sequences')
+local Art = { images = {}, animations={},atlasFrames={},atlasImages={},atlasAnimations={},catalog=Catalog,sequenceErrors={} }
 
 -- Atlas entries store their original source rectangle and texture quad.
 -- Standalone PNGs remain an isolated fallback for incomplete packages
@@ -17,7 +19,7 @@ local function loadImage(file)
 end
 
 function Art.load()
-  Art.images={};Art.animations={};Art.atlasFrames={};Art.atlasImages={}
+  Art.images={};Art.animations={};Art.atlasFrames={};Art.atlasImages={};Art.atlasAnimations={};Art.sequenceErrors={}
   local names={'background','grass','grass2','dirt','dirt2','forest','forest2','rocks',
     'blue_hq','blue_barracks','blue_factory','blue_turret',
     'red_hq','red_barracks','red_factory','red_turret',
@@ -48,6 +50,38 @@ function Art.load()
         end
       end
     end
+  end
+  -- The manifest is empty until original frame order/timing is independently
+  -- verified. Quads reuse the existing atlas texture cache with no copies.
+  if canQuad then
+    -- A verified sequence can reference any of the 67 original atlases, not
+    -- only the twelve textures already used by the static prototype sprites.
+    for _,states in pairs(SequenceManifest) do
+      if type(states)=='table' then
+        for _,entry in pairs(states) do
+          if type(entry)=='table' and entry.verification=='verified'
+            and type(entry.frames)=='table' then
+            for _,frame in ipairs(entry.frames) do
+              if type(frame)=='table' and type(frame.atlas)=='string'
+                and frame.atlas:match('^[%w_%-]+%.png$')
+                and not Art.atlasImages[frame.atlas] then
+                Art.atlasImages[frame.atlas]=loadImage('assets/original/'..frame.atlas)
+              end
+            end
+          end
+        end
+      end
+    end
+    local dims={}
+    for atlas,texture in pairs(Art.atlasImages) do
+      local w,h=texture:getDimensions()
+      dims[atlas]={w,h}
+    end
+    local function atlasTexture(atlas)
+      return Art.atlasImages[atlas]
+    end
+    Art.atlasAnimations,Art.sequenceErrors=Sequence.build(SequenceManifest,dims,
+      atlasTexture,love.graphics.newQuad)
   end
   -- Optional standalone frames. A modder or asset-restoration pass can add
   -- assets/animations/blue_infantry/walk_01.png, walk_02.png etc. No fake
@@ -98,9 +132,26 @@ function Art.draw(name,x,y,w,h,angle,alpha)
   end
 end
 
-function Art.fitSize(name,maxW,maxH,state,time,fps)
+function Art.hasSequence(name,state)
+  return not not ((Art.atlasAnimations[name] or {})[state])
+end
+function Art.frameFor(name,state,time,fps)
+  local atlas=(Art.atlasAnimations[name] or {})[state or 'idle']
+  if atlas then
+    local t=math.max(0,time or 0)
+    local index
+    if atlas.loop then
+      index=require('src.animation').frame(t,#atlas.frames,atlas.fps)
+    else
+      index=math.min(#atlas.frames,math.floor(t*atlas.fps)+1)
+    end
+    return atlas.frames[index]
+  end
   local frames=(Art.animations[name] or {})[state or 'idle']
-  local image=frames and frames[require('src.animation').frame(time,#frames,fps or 8)] or atlasFrame(name)
+  return frames and frames[require('src.animation').frame(time,#frames,fps or 8)] or atlasFrame(name)
+end
+function Art.fitSize(name,maxW,maxH,state,time,fps)
+  local image=Art.frameFor(name,state,time,fps)
   if not image then return maxW,maxH,image end
   local iw,ih
   if type(image)=='table' and image.quad then iw,ih=image.w,image.h

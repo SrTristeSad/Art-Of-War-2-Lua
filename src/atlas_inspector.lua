@@ -2,7 +2,8 @@
 -- Mostra os PNGs brutos sem modificar os atlas ou criar frames ficticios.
 local Regions=require('src.atlas_regions')
 local Catalog=require('src.atlas_catalog')
-local Inspector={active=false,index=1,zoom=1,files={},cache={},mouseX=nil,mouseY=nil,dragging=nil,selection=nil,message=nil,showVerified=true}
+local Draft=require('src.sequence_draft')
+local Inspector={active=false,index=1,zoom=1,files={},cache={},mouseX=nil,mouseY=nil,dragging=nil,selection=nil,message=nil,showVerified=true,previewFrames={},previewTime=0,previewPlaying=false,previewFPS=8,exportCount=0}
 local DIR='assets/original/'
 local AREA={x=10,y=43,w=220,h=222}
 local function normalizedFilename(a)
@@ -19,6 +20,7 @@ end
 function Inspector.initialize()
   Inspector.files={};Inspector.cache={};Inspector.index=1;Inspector.zoom=1
   Inspector.selection=nil;Inspector.message=nil;Inspector.dragging=nil
+  Inspector.previewFrames={};Inspector.previewTime=0;Inspector.previewPlaying=false;Inspector.previewFPS=8
   local fs=love.filesystem
   local entries=(fs and fs.getDirectoryItems and fs.getDirectoryItems(DIR)) or {}
   for _,entry in ipairs(entries) do
@@ -88,6 +90,45 @@ function Inspector.saveSelection()
   Inspector.message=ok and ('Regiao registrada em '..path) or tostring(writeErr or 'Erro ao salvar')
   return not not ok
 end
+-- Engineering-only animation candidate tool: never marks original frame order as verified.
+function Inspector.addFrame()
+  local file=Inspector.selectedFile()
+  local _,_,_,iw,ih=imagePlacement()
+  local ok,err=Draft.append(Inspector.previewFrames,file,Inspector.selection,iw or 0,ih or 0)
+  if not ok then Inspector.message=err;return false end
+  Inspector.previewTime=0
+  Inspector.message='Quadro candidato '..#Inspector.previewFrames..'/64 registrado'
+  return true
+end
+function Inspector.exportDraft()
+  local fs=love.filesystem
+  local previous=fs.getInfo('atlas_sequences_candidates.csv','file')
+    and fs.read('atlas_sequences_candidates.csv') or nil
+  if fs.getInfo('atlas_sequences_candidates.csv','file') and previous==nil then
+    Inspector.message='Nao foi possivel ler CSV';return false
+  end
+  if previous==nil then previous=Draft.HEADER end
+  if previous:sub(1,#Draft.HEADER)~=Draft.HEADER or #previous>1000000 then
+    Inspector.message='CSV invalido ou muito grande';return false
+  end
+  local nextNumber=0
+  for id in previous:gmatch('draft_(%d+)') do
+    nextNumber=math.max(nextNumber,tonumber(id) or 0)
+  end
+  local rows,err=Draft.csvRows(string.format('draft_%04d',nextNumber+1),
+    Inspector.previewFrames,Inspector.previewFPS)
+  if not rows then Inspector.message=err;return false end
+  local ok,msg=fs.write('atlas_sequences_candidates.csv',previous..rows)
+  Inspector.message=ok and ('Rascunho '..(nextNumber+1)..' exportado (nao verificado)')
+    or tostring(msg or 'Falha ao escrever CSV')
+  return not not ok
+end
+function Inspector.update(dt)
+  if Inspector.active and Inspector.previewPlaying and #Inspector.previewFrames>0 then
+    Inspector.previewTime=Inspector.previewTime+math.min(math.max(0,dt or 0),.25)
+    if Inspector.previewTime>10000 then Inspector.previewTime=Inspector.previewTime%1 end
+  end
+end
 function Inspector.mousereleased(x,y,button)
   if not Inspector.active or button~=1 or not Inspector.dragging then return false end
   local px,py=sourcePixel(x,y,true)
@@ -104,6 +145,11 @@ function Inspector.keypressed(key)
   elseif key=='home' then Inspector.index=1;Inspector.zoom=1;Inspector.selection=nil;Inspector.dragging=nil
   elseif key=='end' then Inspector.index=math.max(1,#Inspector.files);Inspector.zoom=1;Inspector.selection=nil;Inspector.dragging=nil
   elseif key=='v' then Inspector.showVerified=not Inspector.showVerified
+  elseif key=='g' then Inspector.addFrame()
+  elseif key=='p' then Inspector.previewPlaying=not Inspector.previewPlaying;Inspector.previewTime=0
+  elseif key=='f' then Inspector.previewFPS=Inspector.previewFPS%16+1;Inspector.previewTime=0
+  elseif key=='x' then Inspector.previewFrames={};Inspector.previewTime=0;Inspector.previewPlaying=false;Inspector.message='Sequencia candidata limpa'
+  elseif key=='e' then Inspector.exportDraft()
   elseif key=='s' then Inspector.saveSelection()
   elseif key=='c' then Inspector.selection=nil;Inspector.dragging=nil;Inspector.message=nil
   elseif key=='+' or key=='=' or key=='kp+' then Inspector.changeZoom(1)
@@ -187,6 +233,32 @@ function Inspector.draw()
       g.rectangle('line',x+r.x*scale,y+r.y*scale,r.w*scale,r.h*scale)
     end
     g.setStencilTest()
+    -- Play a selected sequence on a fixed-size developer-only preview surface.
+    -- Source image data is read through the same cache; no pixels are rewritten.
+    if #Inspector.previewFrames>0 then
+      local fi=Draft.frameIndex(Inspector.previewTime,#Inspector.previewFrames,Inspector.previewFPS)
+      local frame=Inspector.previewFrames[fi]
+      local source=Inspector.cache[frame.atlas]
+      if not source then
+        local ok,loaded=pcall(g.newImage,DIR..frame.atlas)
+        if ok and loaded then loaded:setFilter('nearest','nearest');source=loaded
+          Inspector.cache[frame.atlas]=loaded end
+      end
+      g.setColor(.015,.035,.055,.95);g.rectangle('fill',160,193,69,69)
+      if source and type(g.newQuad)=='function' then
+        local iw,ih=source:getDimensions()
+        if Regions.validate(frame.atlas,frame,iw,ih) then
+          local q=g.newQuad(frame.x,frame.y,frame.w,frame.h,iw,ih)
+          local zoom=math.min(58/frame.w,52/frame.h)
+          local dw,dh=frame.w*zoom,frame.h*zoom
+          g.setColor(1,1,1,1)
+          g.draw(source,q,194-dw/2,218-dh/2,0,zoom,zoom)
+        end
+      end
+      g.setColor(.5,.95,.65,1)
+      g.rectangle('line',160,193,69,69)
+      write(string.format('%d/%d %d fps',fi,#Inspector.previewFrames,Inspector.previewFPS),162,250)
+    end
     local mx,my=Inspector.mouseX,Inspector.mouseY
     if mx and mx>=AREA.x and mx<AREA.x+AREA.w and my>=AREA.y and my<AREA.y+AREA.h then
       local px,py=sourcePixel(mx,my,false)
@@ -216,6 +288,9 @@ function Inspector.draw()
     end
   end
   write(info,8,304)
+  if #Inspector.previewFrames>0 then
+    write('G:+ P:play F:fps X:limpar E:CSV',7,15)
+  end
   if Inspector.message then write(Inspector.message:sub(1,39),8,267)
   elseif not image then -- empty source
   else
