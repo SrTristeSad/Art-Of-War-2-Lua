@@ -163,3 +163,11 @@ As correções abaixo são **engenharia de robustez**, não equivalência compro
 **Pendente para a fidelidade 1:1:** sequências, direções, mapas, scripts e
 parâmetros do JAR/execução original. Esta etapa melhora a investigação, não
 certifica comportamento do jogo original.
+
+
+### Etapa v0.11 — comparacao visual controlada
+
+- **Concluido (ferramenta):** fixar regiao de referencia com `H` e comparar com a selecao atual, inclusive entre atlas; `L` para liberar. Nao altera estado do motor.
+- **Concluido (inventario):** gerador deterministico de seis pranchas para as 72 regioes prioritarias com indice; 106 regioes de baixa prioridade mantidas.
+- **Concluido (qualidade):** testes Lua e Python, inventario SHA-256 dos 67 atlas e regressao do jogo.
+- **Ainda nao feito:** certificacao de ordem/direcao/tempo dos quadros, reproducao 1:1 do HUD e das missoes, teste grafico no LÖVE/Android. Dependencia principal: JAR completo original.

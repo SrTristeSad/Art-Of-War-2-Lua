@@ -4,7 +4,8 @@ local Regions=require('src.atlas_regions')
 local Catalog=require('src.atlas_catalog')
 local Draft=require('src.sequence_draft')
 local Candidates=require('src.atlas_candidates')
-local Inspector={active=false,index=1,zoom=1,files={},cache={},mouseX=nil,mouseY=nil,dragging=nil,selection=nil,message=nil,showVerified=true,showCandidates=false,reviewOnly=true,candidateIndex=0,previewFrames={},previewTime=0,previewPlaying=false,previewFPS=8,exportCount=0}
+local Compare=require('src.atlas_compare')
+local Inspector={active=false,index=1,zoom=1,files={},cache={},mouseX=nil,mouseY=nil,dragging=nil,selection=nil,message=nil,showVerified=true,showCandidates=false,reviewOnly=true,candidateIndex=0,previewFrames={},previewTime=0,previewPlaying=false,previewFPS=8,exportCount=0,pinnedFrame=nil}
 local DIR='assets/original/'
 local AREA={x=10,y=43,w=220,h=222}
 local function normalizedFilename(a)
@@ -22,6 +23,7 @@ function Inspector.initialize()
   Inspector.files={};Inspector.cache={};Inspector.index=1;Inspector.zoom=1
   Inspector.selection=nil;Inspector.message=nil;Inspector.dragging=nil;Inspector.candidateIndex=0
   Inspector.previewFrames={};Inspector.previewTime=0;Inspector.previewPlaying=false;Inspector.previewFPS=8
+  Inspector.pinnedFrame=nil
   local fs=love.filesystem
   local entries=(fs and fs.getDirectoryItems and fs.getDirectoryItems(DIR)) or {}
   for _,entry in ipairs(entries) do
@@ -120,6 +122,20 @@ function Inspector.saveSelection()
   Inspector.message=ok and ('Regiao registrada em '..path) or tostring(writeErr or 'Erro ao salvar')
   return not not ok
 end
+-- Pin a source rectangle for side-by-side comparison, including across atlas files.
+-- Pinning never certifies a frame or changes an animation manifest.
+function Inspector.pinSelection()
+  local _,_,_,iw,ih=imagePlacement()
+  local frame,err=Compare.capture(Inspector.selectedFile(),Inspector.selection,iw or 0,ih or 0)
+  if not frame then Inspector.message=err;return false end
+  Inspector.pinnedFrame=frame
+  Inspector.message='Referencia fixada (H); L libera'
+  return true
+end
+function Inspector.clearPinned()
+  Inspector.pinnedFrame=nil
+  Inspector.message='Referencia liberada'
+end
 -- Engineering-only animation candidate tool: never marks original frame order as verified.
 function Inspector.addFrame()
   local file=Inspector.selectedFile()
@@ -179,6 +195,8 @@ function Inspector.keypressed(key)
   elseif key=='j' then Inspector.reviewOnly=not Inspector.reviewOnly;Inspector.candidateIndex=0;Inspector.selection=nil;Inspector.message=Inspector.reviewOnly and 'Filtro: revisao prioritaria' or 'Filtro: todas as regioes'
   elseif key=='n' then Inspector.nextCandidate(1)
   elseif key=='m' then Inspector.nextCandidate(-1)
+  elseif key=='h' then Inspector.pinSelection()
+  elseif key=='l' then Inspector.clearPinned()
   elseif key=='g' then Inspector.addFrame()
   elseif key=='p' then Inspector.previewPlaying=not Inspector.previewPlaying;Inspector.previewTime=0
   elseif key=='f' then Inspector.previewFPS=Inspector.previewFPS%16+1;Inspector.previewTime=0
@@ -306,6 +324,38 @@ function Inspector.draw()
       g.rectangle('line',160,193,69,69)
       write(string.format('%d/%d %d fps',fi,#Inspector.previewFrames,Inspector.previewFPS),162,250)
     end
+    -- Compare a pinned crop with the currently selected region. Both are
+    -- rendered with nearest-neighbor Quads; clipping keeps them inside the UI.
+    if Inspector.pinnedFrame then
+      local function tile(frame,tx,label)
+        local ty=176
+        g.setColor(.02,.04,.07,.96);g.rectangle('fill',tx,ty,105,87)
+        g.setColor(.40,.74,.86,1);g.rectangle('line',tx,ty,105,87)
+        write(label,tx+3,ty+2)
+        if not frame then write('Sem selecao',tx+4,ty+36);return end
+        local source=Inspector.cache[frame.atlas]
+        if not source then
+          local ok,loaded=pcall(g.newImage,DIR..frame.atlas)
+          if ok and loaded then loaded:setFilter('nearest','nearest')
+            source=loaded;Inspector.cache[frame.atlas]=loaded end
+        end
+        if source and Compare.fits(frame,source) and type(g.newQuad)=='function' then
+          local iw,ih=source:getDimensions()
+          local quad=g.newQuad(frame.x,frame.y,frame.w,frame.h,iw,ih)
+          local scale=Compare.scale(frame,94,57)
+          g.setColor(1,1,1,1)
+          g.draw(source,quad,tx+52.5-frame.w*scale/2,
+            ty+39-frame.h*scale/2,0,scale,scale)
+        else write('Sem imagem',tx+4,ty+36) end
+        write(string.format('%dx%d',frame.w,frame.h),tx+4,ty+73)
+      end
+      local candidate=nil
+      if Inspector.selection then
+        candidate=Compare.capture(file,Inspector.selection,iw,ih)
+      end
+      tile(Inspector.pinnedFrame,12,'H:referencia')
+      tile(candidate,123,'Atual / L:limpar')
+    end
     local mx,my=Inspector.mouseX,Inspector.mouseY
     if mx and mx>=AREA.x and mx<AREA.x+AREA.w and my>=AREA.y and my<AREA.y+AREA.h then
       local px,py=sourcePixel(mx,my,false)
@@ -324,7 +374,7 @@ function Inspector.draw()
   write('< ANT',21,285);write('ZOOM 1x',96,285);write('PROX >',174,285)
   local r=Inspector.selection
   local info=r and string.format('%d,%d  %dx%d  S:salvar C:limpar',r.x,r.y,r.w,r.h)
-    or (Inspector.pixelX and ('Pixel: '..Inspector.pixelX..', '..Inspector.pixelY) or 'Setas:PNG N/M:regiao J:filtro')
+    or (Inspector.pixelX and ('Pixel: '..Inspector.pixelX..', '..Inspector.pixelY) or 'N/M:regiao J:filtro H:fixar L:liberar')
   if not r and Inspector.pixelX then
     for name,record in pairs(Catalog) do
       if record.atlas==file and Inspector.pixelX>=record.x and Inspector.pixelY>=record.y

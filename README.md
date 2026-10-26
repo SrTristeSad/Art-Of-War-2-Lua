@@ -151,3 +151,12 @@ Testes em um LÖVE gráfico real e no Android continuam pendentes.
 Foram localizadas 178 regiões candidatas por transparência, catalogadas em `docs/ATLAS_CANDIDATOS.csv` com origem em `src/atlas_candidates.lua`. A detecção **não comprova quadros de animação** e não integra automaticamente nada às unidades. Para reconstruir/revalidar: `python tools/detect_sprite_candidates.py --verify` (requer Pillow).
 
 Corrigida a duração do estado visual de ataque: uma animação `verified` não é interrompida pelo término do flash de 0,15 s; isso não muda a cadência de ataques. Nenhuma animação original foi certificada nesta etapa. A validação no runtime LÖVE real continua pendente.
+
+
+## Atualizacao v0.11 — comparacao de poses e pranchas de estudo
+
+No inspetor `F2`, pressione `H` sobre uma selecao ou candidato para fixar uma referencia visual; mude de regiao com `N/M` ou de atlas com as setas. A referencia permanece a esquerda e a selecao atual aparece a direita, ambas com as proporcoes corretas e nearest-neighbor. `L` remove a referencia. **Isso nao habilita nenhuma animacao como verificada.**
+
+As 72 regioes prioritarias podem ser organizadas em seis pranchas de inspeccao, geradas com `python3 tools/build_review_gallery.py` no diretorio `docs/review_gallery/`. `INDEX.csv` vincula miniaturas a atlas e coordenadas originais. As 106 regioes de baixa prioridade seguem preservadas. Consulte [COMPARACAO_DE_POSES.md](docs/COMPARACAO_DE_POSES.md).
+
+Ainda nao foram comprovados frames de movimento, ataque ou direcoes do original. A execucao real no LÖVE/Android segue pendente. O objetivo 1:1 permanece inalterado.
