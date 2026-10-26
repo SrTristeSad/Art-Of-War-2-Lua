@@ -223,3 +223,10 @@ fidelidade 1:1 nem afirma conhecer a lógica da IA original.
 **Entregue:** a distribuição dos destinos de grupo passou a validar o raio físico de cada soldado ou tanque, impedir sobreposição de vagas, preservar espaço livre perto de tropas não selecionadas e rejeitar posições que invadam obstáculos ou bordas. O recálculo do caminho agora distingue um desvio útil de um movimento lateral sem progresso, reduzindo recomputações inúteis. Há testes determinísticos e automação de regressão.
 
 **Pendente para o 1:1:** comportamento verdadeiro das formações no JAR original, negociação de prioridade e desobstrução de corredores estreitos sem área de ultrapassagem, execução real no LÖVE, mapas e campanhas autênticas. Não confundir a melhoria técnica de formação com a mecânica comprovada do jogo Java.
+
+
+## v0.16 — resolução física de passagem em sentidos contrários
+
+**Entregue:** preferência estável por ID para duas tropas com ordens contrárias. A unidade que cede procura uma baia lateral realmente alcançável (checagem de colisão contínua); estaciona enquanto a tropa prioritária passa e depois retoma a ordem original. Uma baia invalidada pelo tráfego pode ser abandonada, sem esperar indefinidamente. Não há teleporte, atravessamento de entidades ou mutação do mapa. Estado de espera e pausa de replanejamento ficam fora dos saves. Testes específicos e integração ao CI.
+
+**Não-canônico / pendente:** a política de preferência é exclusiva do protótipo Lua, e **não** pode ser apresentada como comportamento do Art of War 2 J2ME sem evidência. Gargalos sem área de manobra ainda podem resultar em impasse físico. Faltam o JAR integral para confirmar regras, mapas e missões e testes gráficos reais no LÖVE e Android.

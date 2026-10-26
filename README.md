@@ -235,3 +235,15 @@ para repetir os testes específicos desta etapa.
 - `tests/squad_formation_regression.lua` confirma espaçamento de tropas de tamanhos diferentes, determinismo, bordas e detecção de progresso, e foi incluído no GitHub Actions.
 
 **Limites:** a política de formação permanece provisória, não foi extraída do JAR e não resolve todos os impasses físicos em corredores de mão única. A execução real no LÖVE/Android continua sem validação.
+
+
+## Atualização v0.16 — preferência em gargalos (provisória)
+
+- Unidades com **ordens em sentidos opostos** e proximidade real identificam um encontro frontal.
+- Desempate determinístico: a unidade de menor ID mantém a preferência; a outra **só** tenta estacionar em uma baia lateral se um trajeto livre de colisões existir. A ordem do usuário não é substituída por essa manobra.
+- A unidade que cede espera fisicamente na baia até a prioritária ultrapassar a posição do encontro. Se não houver espaço para ceder, continua bloqueada pelo sistema de colisão existente; **não existe teleporte nem passagem fantasma**.
+- Uma baia que ficar bloqueada por nova movimentação é abandonada após curto intervalo, com pausa antes de nova tentativa, evitando espera infinita.
+- As reservas e os temporizadores são transitórios e **não entram no save**. Uma nova ordem cancela a manobra de cessão.
+- `tests/chokepoint_yield_regression.lua` cobre corredor com baia, corredor sem baia, colisões, limites do terreno, mudança de ordem e persistência. A suíte também roda na automação do GitHub.
+
+**Limitação importante:** em corredor estreito sem nenhuma posição de ultrapassagem, duas unidades podem ficar paradas; isso é um bloqueio físico legítimo, não algo corrigível atravessando paredes. A estratégia continua provisória até comparação com o executável Java original e não demonstra fidelidade 1:1. Execução visual em LÖVE e Android segue pendente.

@@ -148,7 +148,7 @@ function World:moveSelected(x,y)
       -- Do not issue an impossible formation slot if the ground is full.
       if spot then goal.x,goal.y=spot.x,spot.y else goal=nil end
     end
-    e.order=goal;e.path=nil;e.pathTime=0;e.blockedTime=0;e.steerTime=0;e.avoidCongestion=false
+    e.order=goal;e.path=nil;e.pathTime=0;e.blockedTime=0;e.steerTime=0;e.avoidCongestion=false;e.trafficYield=nil;e.yieldCooldown=0
   end
   self:effect('order',x,y,0.65)
   self:toast(#units..' unidades receberam ordens.')
@@ -242,6 +242,63 @@ function World:nearestEnemy(e,range)
 end
 function World:navigate(e,x,y,dt)
   local st=STATS[e.kind]
+  -- Yielding is a temporary navigation detour; the player's order remains
+  -- unchanged. Check it before pathfinding so a waiting unit does not replan
+  -- toward an occupied choke every half second.
+  e.yieldCooldown=math.max(0,(e.yieldCooldown or 0)-dt)
+  local yield=e.trafficYield
+  if yield then
+    local priority=self:findEntity(yield.priorityId)
+    local stillApproaching=priority and priority.order
+    local passed=not stillApproaching
+    if priority and priority.order then
+      local projection=(priority.x-yield.anchorX)*yield.priorityDX+
+        (priority.y-yield.anchorY)*yield.priorityDY
+      passed=projection>Movement.radius(e)+Movement.radius(priority)+6
+    end
+    if passed then
+      e.trafficYield=nil;e.path=nil;e.pathTime=0
+      e.blockedTime=0;e.steerTime=0;e.avoidCongestion=false
+    else
+      local dd=distance(e.x,e.y,yield.x,yield.y)
+      if dd>1.0 then
+        local moved=Movement.advance(self,e,yield.x,yield.y,
+          math.min(st.speed*dt,dd))
+        if moved then
+          e.moving=true
+          yield.stuckTime=0
+        else
+          -- New traffic may invalidate a previously clear side bay. Avoid
+          -- waiting forever or selecting the same blocked bay every frame.
+          yield.stuckTime=(yield.stuckTime or 0)+dt
+          if yield.stuckTime>=0.8 then
+            e.trafficYield=nil
+            e.yieldCooldown=1.2
+            e.path=nil;e.pathTime=0;e.avoidCongestion=true
+          end
+        end
+        return moved
+      end
+      return false -- parked in a side bay, awaiting right of way
+    end
+  end
+  if not e.trafficYield and e.yieldCooldown<=0 then
+    local partner=Movement.headOnPartner(self,e,x,y)
+    if partner then
+      local bay=Movement.passingBay(self,e,partner,x,y)
+      if bay then
+        local pdx,pdy=partner.order.x-partner.x,partner.order.y-partner.y
+        local plen=math.sqrt(pdx*pdx+pdy*pdy)
+        if plen>1e-6 then
+          e.trafficYield={x=bay.x,y=bay.y,priorityId=partner.id,
+            anchorX=e.x,anchorY=e.y,priorityDX=pdx/plen,
+            priorityDY=pdy/plen}
+          e.path=nil;e.pathTime=0
+          return self:navigate(e,x,y,dt)
+        end
+      end
+    end
+  end
   if not e.path or (e.pathTime or 0)<=0 then
     self:refreshBlocked()
     local sx=math.floor(e.x/SIZE+.5);local sy=math.floor(e.y/SIZE+.5)

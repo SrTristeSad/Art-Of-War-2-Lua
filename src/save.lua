@@ -29,7 +29,7 @@ function Save.write(world)
   for _,e in ipairs(world.entities) do
     local entity={}
     for k,v in pairs(e) do
-      if k~='path' and k~='pathTime' and k~='blockedTime' and k~='steerTime' and k~='avoidCongestion' and k~='firePulse' and k~='hitPulse' and k~='animTime' and k~='animationTime' and k~='animationState' and k~='moving' then entity[k]=v end
+      if k~='path' and k~='pathTime' and k~='blockedTime' and k~='steerTime' and k~='avoidCongestion' and k~='trafficYield' and k~='yieldCooldown' and k~='firePulse' and k~='hitPulse' and k~='animTime' and k~='animationTime' and k~='animationState' and k~='moving' then entity[k]=v end
     end
     copy.entities[#copy.entities+1]=entity
   end
@@ -51,7 +51,7 @@ function Save.read(World)
   world.selected={};world.buildMode=nil;world.noticeTimer=0
   world.effects={};world.preview=nil
   for _,e in ipairs(world.entities) do
-    e.path=nil;e.pathTime=0;e.blockedTime=0;e.steerTime=0;e.avoidCongestion=false
+    e.path=nil;e.pathTime=0;e.blockedTime=0;e.steerTime=0;e.avoidCongestion=false;e.trafficYield=nil;e.yieldCooldown=0
     e.moving=false;e.animationState='idle';e.animationTime=0;e.animTime=0
     e.firePulse=0;e.hitPulse=0
   end

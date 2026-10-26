@@ -163,6 +163,68 @@ function Movement.formationSlots(world,units,x,y,selected)
   return goals
 end
 
+-- v0.16 provisional head-on yielding. This is a short-lived traffic rule,
+-- not a claim about the original J2ME units or their pathfinding priorities.
+-- A higher-ID unit may temporarily park in a real, reachable side bay while
+-- the lower-ID unit passes. If there is no bay, the ordinary blocked-path
+-- behavior remains in effect; no teleportation or ghost collision is allowed.
+function Movement.passingBay(world,entity,other,tx,ty)
+  local dx,dy=tx-entity.x,ty-entity.y
+  local length=math.sqrt(dx*dx+dy*dy)
+  if length<1e-6 then return nil end
+  local vx,vy=dx/length,dy/length
+  -- Perpendicular to the intended direction. A bay must be sufficiently
+  -- far off the center line that *both* bodies can pass beside each other.
+  local needed=radius(entity)+radius(other)+2
+  local options={}
+  for _,side in ipairs({1,-1}) do
+    for _,offset in ipairs({TILE,2*TILE}) do
+      local bx=entity.x-side*vy*offset
+      local by=entity.y+side*vx*offset
+      if offset>=needed and Movement.canOccupy(world,entity,bx,by)
+          and Movement.sweepClear(world,entity,bx,by) then
+        options[#options+1]={x=bx,y=by,offset=offset,side=side}
+      end
+    end
+  end
+  table.sort(options,function(a,b)
+    if a.offset~=b.offset then return a.offset<b.offset end
+    -- Stable deterministic side preference by id.
+    return a.side==(entity.id%2==0 and 1 or -1)
+  end)
+  return options[1]
+end
+
+-- Return a priority partner only when BOTH units have intentional opposing
+-- orders and the lower-ID unit is approaching from in front. Nearby parked
+-- units are left to normal avoidance; the rule never invents an order.
+function Movement.headOnPartner(world,entity,tx,ty)
+  if not entity.order or entity.building then return nil end
+  local dx,dy=tx-entity.x,ty-entity.y
+  local mag=math.sqrt(dx*dx+dy*dy)
+  if mag<4 then return nil end
+  dx,dy=dx/mag,dy/mag
+  local best,bestDist=nil,math.huge
+  for _,other in ipairs(world.entities) do
+    if other~=entity and other.alive and not other.building
+        and entity.id>other.id and other.order and not other.trafficYield then
+      local ax,ay=other.x-entity.x,other.y-entity.y
+      local dist=math.sqrt(ax*ax+ay*ay)
+      if dist<math.max(40,radius(entity)+radius(other)+26)
+          and dist>1e-6 and (ax*dx+ay*dy)/dist>0.65 then
+        local gx,gy=other.order.x-other.x,other.order.y-other.y
+        local glm=math.sqrt(gx*gx+gy*gy)
+        if glm>4 and (gx*dx+gy*dy)/glm< -0.65 then
+          if dist<bestDist or (dist==bestDist and other.id<best.id) then
+            best,bestDist=other,dist
+          end
+        end
+      end
+    end
+  end
+  return best
+end
+
 -- Congestion-aware replanning only when local avoidance has been blocked
 -- repeatedly. Do not change the permanent blocked grid or the saves.
 function Movement.trafficMap(world,entity)
