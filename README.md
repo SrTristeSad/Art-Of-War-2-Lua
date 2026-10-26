@@ -160,3 +160,14 @@ No inspetor `F2`, pressione `H` sobre uma selecao ou candidato para fixar uma re
 As 72 regioes prioritarias podem ser organizadas em seis pranchas de inspeccao, geradas com `python3 tools/build_review_gallery.py` no diretorio `docs/review_gallery/`. `INDEX.csv` vincula miniaturas a atlas e coordenadas originais. As 106 regioes de baixa prioridade seguem preservadas. Consulte [COMPARACAO_DE_POSES.md](docs/COMPARACAO_DE_POSES.md).
 
 Ainda nao foram comprovados frames de movimento, ataque ou direcoes do original. A execucao real no LÖVE/Android segue pendente. O objetivo 1:1 permanece inalterado.
+
+
+## Etapa v0.12 — ordens de combate e estabilidade do núcleo
+
+- Edifícios destruídos, objetos antigos e referências não registradas na partida não podem enfileirar unidades nem gastar créditos.
+- Uma ordem de ataque manual contra uma unidade específica tem prioridade sobre a escolha automática de inimigos próximos. Enquanto a unidade estiver viva, o comando permanece associado ao seu identificador. Ao morrer, a ordem é descartada para evitar perseguição indefinida às coordenadas antigas. Ordens atribuídas automaticamente pela IA continuam utilizando a seleção automática de alvos.
+- A primeira destruição de um QG que define vitória/derrota encerra o processamento da simulação no mesmo passo; os próximos atacantes não podem sobrescrever o resultado.
+- O menu exibe o identificador atualizado `PROTOTIPO v0.12`. Testes específicos de combate foram acrescentados à suíte e ao GitHub Actions.
+- Esses comportamentos melhoram a **consistência do protótipo Lua**, mas ainda não foram certificados contra o executável Java original. Não implicam equivalência 1:1 de IA ou combate.
+
+Teste adicional: `lua5.3 tests/combat_orders_regression.lua` (ou `texlua` onde não houver Lua 5.3).

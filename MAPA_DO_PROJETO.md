@@ -171,3 +171,14 @@ certifica comportamento do jogo original.
 - **Concluido (inventario):** gerador deterministico de seis pranchas para as 72 regioes prioritarias com indice; 106 regioes de baixa prioridade mantidas.
 - **Concluido (qualidade):** testes Lua e Python, inventario SHA-256 dos 67 atlas e regressao do jogo.
 - **Ainda nao feito:** certificacao de ordem/direcao/tempo dos quadros, reproducao 1:1 do HUD e das missoes, teste grafico no LÖVE/Android. Dependencia principal: JAR completo original.
+
+
+## Etapa v0.12 — ordens de combate e estabilidade do núcleo
+
+- Edifícios destruídos, objetos antigos e referências não registradas na partida não podem enfileirar unidades nem gastar créditos.
+- Uma ordem de ataque manual contra uma unidade específica tem prioridade sobre a escolha automática de inimigos próximos. Enquanto a unidade estiver viva, o comando permanece associado ao seu identificador. Ao morrer, a ordem é descartada para evitar perseguição indefinida às coordenadas antigas. Ordens atribuídas automaticamente pela IA continuam utilizando a seleção automática de alvos.
+- A primeira destruição de um QG que define vitória/derrota encerra o processamento da simulação no mesmo passo; os próximos atacantes não podem sobrescrever o resultado.
+- O menu exibe o identificador atualizado `PROTOTIPO v0.12`. Testes específicos de combate foram acrescentados à suíte e ao GitHub Actions.
+- Esses comportamentos melhoram a **consistência do protótipo Lua**, mas ainda não foram certificados contra o executável Java original. Não implicam equivalência 1:1 de IA ou combate.
+
+Teste adicional: `lua5.3 tests/combat_orders_regression.lua` (ou `texlua` onde não houver Lua 5.3).

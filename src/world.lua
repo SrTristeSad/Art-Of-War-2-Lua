@@ -158,7 +158,7 @@ function World:moveSelected(x,y)
     end
   end
   for _,e in ipairs(units) do
-    local goal={x=x,y=y,target=target and target.id or nil}
+    local goal={x=x,y=y,target=target and target.id or nil,manualAttack=target~=nil}
     if not target and #destinations>0 then
       local closest=1;local distanceSquared=math.huge
       for i,spot in ipairs(destinations) do
@@ -203,7 +203,13 @@ function World:placeBuilding(kind,x,y)
   return true
 end
 function World:train(building,kind)
-  if not building or not building.building or building.team~=1 then return false end
+  -- Reject dead, fake, or stale building objects (e.g. from a previous match).
+  if not building or not building.alive or not building.building or building.team~=1 then return false end
+  local registered=false
+  for _,e in ipairs(self.entities) do
+    if e==building then registered=true;break end
+  end
+  if not registered then return false end
   if not ((building.kind=='barracks' and kind=='infantry') or (building.kind=='factory' and kind=='tank')) then return false end
   if self.money[1]<self:cost(kind) then self:toast('Creditos insuficientes.');return false end
   local count=0
@@ -230,13 +236,23 @@ function World:spawn(building,kind)
   end
   return nil
 end
+function World:targetDistance(e,target)
+  local d=distance(e.x,e.y,target.x,target.y)
+  -- Use the same effective target geometry for manual orders and auto-attack.
+  if target.building then d=d-(STATS[target.kind].size*.42) end
+  return d
+end
+function World:findEntity(id)
+  for _,e in ipairs(self.entities) do
+    if e.id==id and e.alive then return e end
+  end
+  return nil
+end
 function World:nearestEnemy(e,range)
   local best=nil;local bestDist=range or math.huge
   for _,other in ipairs(self.entities) do
     if other.alive and other.team~=e.team then
-      local d=distance(e.x,e.y,other.x,other.y)
-      -- Dano por distancia ate a borda de edificios, nao apenas ao centro.
-      if other.building then d=d-(STATS[other.kind].size*.42) end
+      local d=self:targetDistance(e,other)
       if d<bestDist then best=other;bestDist=d end
     end
   end
@@ -350,6 +366,9 @@ function World:_tick(dt)
     end
   end
   for _,e in ipairs(self.entities) do
+    -- A destroyed headquarters decides the match once. Never allow later
+    -- entities in this same simulation step to overwrite that result.
+    if self.result then break end
     if e.alive then
       e.cooldown=math.max(0,e.cooldown-dt)
       e.animTime=(e.animTime or 0)+dt
@@ -371,6 +390,20 @@ function World:_tick(dt)
       if e.kind=='infantry' or e.kind=='tank' or e.kind=='turret' then
         local st=STATS[e.kind]
         local enemy,d=self:nearestEnemy(e,st.range)
+        local manualTarget=nil
+        if not e.building and e.order and e.order.manualAttack and e.order.target then
+          manualTarget=self:findEntity(e.order.target)
+          if not manualTarget or manualTarget.team==e.team then
+            -- Never chase the last known coordinates of an already dead enemy.
+            e.order=nil
+          else
+            local manualDist=self:targetDistance(e,manualTarget)
+            -- Explicit attack orders take precedence over automatic target
+            -- selection, including while the requested target is far away.
+            enemy=(manualDist<st.range) and manualTarget or nil
+            d=manualDist
+          end
+        end
         if enemy and e.cooldown==0 then
           enemy.hp=enemy.hp-st.dmg;e.cooldown=st.cooldown
           e.firePulse=0.15
@@ -392,18 +425,20 @@ function World:_tick(dt)
         if not e.building and not enemy then
           local o=e.order
           if o then
-            local goal=nil
-            if o.target then
-              for _,candidate in ipairs(self.entities) do
-                if candidate.id==o.target and candidate.alive then goal=candidate;break end
-              end
+            local goal=o.target and self:findEntity(o.target) or nil
+            if o.target and not goal then
+              -- Invalidate a target-based order when the target disappears.
+              e.order=nil
+              o=nil
             end
+            if o then
             local tx=goal and goal.x or o.x
             local ty=goal and goal.y or o.y
             if distance(e.x,e.y,tx,ty)>(goal and st.range*0.8 or 6) then
               local moved=self:navigate(e,tx,ty,dt)
               if moved and not goal and distance(e.x,e.y,tx,ty)<6 then e.order=nil end
             elseif not goal then e.order=nil end
+            end -- order still valid
           end
         end
       end
